@@ -1,0 +1,166 @@
+{% extends 'habit_stacker/base.html' %}
+
+{% block main_area %}
+
+    <!-- Page content-->
+    <div class="container px-4 px-lg-5 mt-5">
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Post content-->
+                <article>
+                    <!-- Preview image figure-->
+                    <figure class="mb-4"><img class="img-fluid rounded" src="https://dummyimage.com/900x400/ced4da/6c757d.jpg" alt="..." /></figure>
+                    <!-- Post content-->
+                    <section class="mb-5">
+                        <!-- Card Navigation -->
+                        <div class="card text-center">
+                            <div class="card-header">
+                              <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">챌린지 소개</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="auth1-tab" data-bs-toggle="tab" data-bs-target="#auth1" type="button" role="tab" aria-controls="auth1" aria-selected="false">나의 인증 현황</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="auth2-tab" data-bs-toggle="tab" data-bs-target="#auth2" type="button" role="tab" aria-controls="auth2" aria-selected="false">참가자들의 인증 현황</button>
+                                </li>
+                              </ul>
+                            </div>
+                            <div class="tab-content" id="myTabContent">
+                                <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                                    <h5 class="card-title fw-bolder">Overview Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">{{ challenge.description }} 내용</p>
+                                    <p class="card-text">기본정보 : </p>
+                                    <p class="card-text">카테고리 : </p>
+                                    <p class="card-text">진행상태 : </p>
+                                    <p class="card-text">인증샷 예시 : </p>
+                                    <p class="card-text">챌린지 진행 시 꼭 확인해주세요! : </p>
+                                </div>
+
+                                <div class="tab-pane fade" id="auth1" role="tabpanel" aria-labelledby="auth1-tab">
+                                    <h5 class="card-title fw-bolder">Authentication Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">여긴 내 인증 사진</p>
+                                </div>
+                                <div class="tab-pane fade" id="auth2" role="tabpanel" aria-labelledby="auth2-tab">
+                                    <h5 class="card-title fw-bolder">Authentication Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">여긴 참가자 인증 사진</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+
+                          
+                      
+                    </section>
+                </article>
+
+                <!-- Comments section-->
+                <section class="mb-5">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <!-- Comment form-->
+                            <form class="mb-4"><textarea class="form-control" rows="3" placeholder="Join the discussion and leave a comment!"></textarea></form>
+                            <!-- Comment with nested comments-->
+                            <div class="d-flex mb-4">
+                                <!-- Parent comment-->
+                                <div class="flex-shrink-0"><img class="rounded-circle" src="https://dummyimage.com/50x50/ced4da/6c757d.jpg" alt="..." /></div>
+                                <div class="ms-3">
+                                    <div class="fw-bold">Commenter Name</div>
+                                    If you're going to lead a space frontier, it has to be government; it'll never be private enterprise. Because the space frontier is dangerous, and it's expensive, and it has unquantified risks.
+                                    <!-- Child comment 1-->
+                                    <div class="d-flex mt-4">
+                                        <div class="flex-shrink-0"><img class="rounded-circle" src="https://dummyimage.com/50x50/ced4da/6c757d.jpg" alt="..." /></div>
+                                        <div class="ms-3">
+                                            <div class="fw-bold">Commenter Name</div>
+                                            And under those conditions, you cannot establish a capital-market evaluation of that enterprise. You can't get investors.
+                                        </div>
+                                    </div>
+                                    <!-- Child comment 2-->
+                                    <div class="d-flex mt-4">
+                                        <div class="flex-shrink-0"><img class="rounded-circle" src="https://dummyimage.com/50x50/ced4da/6c757d.jpg" alt="..." /></div>
+                                        <div class="ms-3">
+                                            <div class="fw-bold">Commenter Name</div>
+                                            When you put money directly to a problem, it makes a good headline.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Single comment-->
+                            <div class="d-flex">
+                                <div class="flex-shrink-0"><img class="rounded-circle" src="https://dummyimage.com/50x50/ced4da/6c757d.jpg" alt="..." /></div>
+                                <div class="ms-3">
+                                    <div class="fw-bold">Commenter Name</div>
+                                    When I look at the universe and all the ways the universe wants to kill us, I find it hard to reconcile that with statements of beneficence.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            <!-- Side widgets-->
+            <div class="col-lg-4">
+                <!-- Side widget-->
+                <div class="card mb-4">
+                    <div class="card-header">Challenge Manager</div>
+                    <div class="card-body">
+                        <p><strong>Challenge Title : </strong>{{ challenge.title }}</p>
+                        <p><strong>Challenge Duration : </strong>{{ challenge.duration }}</p>
+                        <hr/>
+                        <!-- 사용자 로그인 여부 확인 -->
+                        {% if user.is_authenticated %}
+                            <!-- 로그인한 경우 -->
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="join-btn" data-challenge-id="{{ challenge.id }}">Join</button>
+                        {% else %}
+                            <!-- 비로그인  사용자 : 로그인 페이지로 리디렉션 -->
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="login-btn">Join</button>
+                        {% endif %}
+                        <!-- Join을 누르면 링크로 연결됨. 프로젝트 구조상, 유저가 join을 클릭하면, alert로 참여하시겠습니까? 
+                        (Y/N)를 보여주고, Y를 누르면 등록된 페이지로 이동하고, N를 누르면 single 페이지에 남게 됨. -->
+                        
+                        <!-- 회원 패턴 -->
+                        <!-- 1. 참여하기 버튼을 누름 
+                             2. 참여하시겠습니까? (Y/N) (Alert)
+                             3. Y: 참가자 상세 페이지 이동, N: 챌린지 상세 페이지 (그대로) -->
+                        
+                        <!-- 비회원 패턴 -->
+                        <!-- 1. 참여하기 버튼을 누름 
+                             2. 로그인 페이지로 Redirection
+                             3. 로그인 후 : 챌린지 상세 페이지로 Redirection -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <script>
+        // 로그인한 사용자의 참가 기능
+        document.getElementById('join-btn')?.addEventListener('click', function() {
+            //참여 여부를 묻는 경고창
+            if (confirm("이 챌린지에 참여하시겠습니까? (Y/N)")) {
+                var challengeId = this.getAttribute('data-challenge-id');
+                //참가하는 경우: 참여를 처리하는 페이지로 이동 (참가자만 볼 수 있는 페이지)
+                window.location.href = `/${challengeId}/joined_challenge/`;
+            } else {
+                // 취소하는 경우: 현재 페이지에 그대로 머무름
+                alert('참여를 취소했습니다.')
+            }
+        });
+
+        // 비로그인 사용자는 로그인 페이지로 리디렉션
+        document.getElementById('login-btn')?.addEventListener('click', function() {
+            alert('참여하려면 로그인해야 합니다.');
+            window.location.href = '/account/login/';
+        });
+    </script>
+
+{% endblock %}
+
+
+    
+

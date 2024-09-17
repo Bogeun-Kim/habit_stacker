@@ -8,25 +8,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import logout as auth_logout, login as auth_login
 from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_protect
+from django.contrib.auth.decorators import login_required
 
 from .models import Challenge, ChallengeParticipant, User
 from .forms import SignUpForm, LoginForm, ChallengeForm
-
-def single_challenge_page(request, pk):
-    challenge = Challenge.objects.get(pk=pk)
-
-    if request.user.is_authenticated:
-        if ChallengeParticipant.objects.filter(user=request.user, challenge=challenge).exists():
-            return redirect('joined_challenge', pk=pk)
- 
-
-    return render(
-        request,
-        'habit_stacker/single_challenge_page.html',
-        {
-            'challenge': challenge,
-        }
-    )
 
 @csrf_protect
 @login_required
@@ -43,19 +28,50 @@ def create_challenge(request):
     
     return render(request, 'habit_stacker/challenge_form.html', {'form': form})
 
-def joined_challenge_page(request, pk):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    challenge = Challenge.objects.get(pk=pk)
-    ChallengeParticipant.objects.create(user=request.user, challenge=challenge)
-    #join_challenge(request, pk)
+def single_challenge_page(request, pk):
+    challenge = get_object_or_404(Challenge, pk=pk)
+    is_participant = False
+    participants_count = challenge.participants.count()
+
+    if request.user.is_authenticated:
+        is_participant = ChallengeParticipant.objects.filter(user=request.user, challenge=challenge).exists()
+
+    if is_participant:
+        return redirect('joined_challenge', pk=challenge.pk)
+
     return render(
-        request, 
-        'habit_stacker/joined_challenge.html',
-        {
-            'challenge': challenge,
-        }
-    )
+        request,
+    'habit_stacker/single_challenge_page.html',
+    {
+        'challenge': challenge,
+        'is_participant': is_participant,
+        'participants_count': participants_count,
+    }
+)
+
+@login_required
+def join_challenge(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    if request.user not in challenge.participants.all():
+        ChallengeParticipant.objects.create(user=request.user, challenge=challenge)
+    return redirect('joined_challenge', pk=challenge_id)
+
+@login_required
+def joined_challenge_page(request, pk):
+    challenge = get_object_or_404(Challenge, pk=pk)
+    is_participant = ChallengeParticipant.objects.filter(user=request.user, challenge=challenge).exists()
+    context = {
+        'challenge': challenge,
+        'is_participant': is_participant,
+    }
+    print(is_participant)
+    print(context)
+    return render(request, 'habit_stacker/joined_challenge.html', context)
+
+@login_required
+def authenticate_challenge(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    return render(request, 'habit_stacker/authenticate_challenge.html', {'challenge': challenge})
 
 def main_page(request):
     challenge_list = ChallengeList.as_view()

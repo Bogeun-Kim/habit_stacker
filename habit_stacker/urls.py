@@ -26,12 +26,14 @@ urlpatterns = [
     # path('account/', include('django.contrib.auth.urls')),
     # path('account/', include('account.urls')),
     # path('', views.ChallengeList.as_view(), name='challenge_list'),
-    path('<int:pk>/', views.single_challenge_page, name='single_challenge_page'),
-    # path('<int:pk>/joined_challenge/', views.joined_challenge_page, name='joined_challenge'),
-    path('challenge_form/', views.create_challenge, name='challenge_form'),
     path('signup/', views.signup, name='signup'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout, name='logout'),
+    path('single_challenge_page/<int:pk>/', views.single_challenge_page, name='single_challenge_page'),
+    path('join_challenge/<int:challenge_id>/', views.join_challenge, name='join_challenge'),
+    path('<int:pk>/joined_challenge/', views.joined_challenge_page, name='joined_challenge'),
+    path('authenticate_challenge/<int:challenge_id>/', views.authenticate_challenge, name='authenticate_challenge'),
+    path('challenge_form/', views.create_challenge, name='challenge_form'),
 ]
 
 if settings.DEBUG:

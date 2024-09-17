@@ -30,7 +30,7 @@
                                 <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
                                     <h5 class="card-title fw-bolder">Overview Tab</h5>
                                     <p class="card-text"></p>
-                                    <p class="card-text">{{ challenge.description }} 내용</p>
+                                    <p class="card-text">{{ challenge.description }}</p>
                                     <p class="card-text">기본정보 : </p>
                                     <p class="card-text">카테고리 : </p>
                                     <p class="card-text">진행상태 : </p>
@@ -51,14 +51,8 @@
                             </div>
                         </div>
 
-                        
-
-                          
-                      
                     </section>
                 </article>
-
-                
 
             </div>
             <!-- Side widgets-->
@@ -70,26 +64,11 @@
                         <p><strong>Challenge Title : </strong>{{ challenge.title }}</p>
                         <p><strong>Challenge Duration : </strong>{{ challenge.duration }}</p>
                         <hr/>
-                        <!-- 사용자 로그인 여부 확인 -->
-                        {% if user.is_authenticated %}
-                            <!-- 로그인한 경우 -->
-                            <button class="btn btn-lg btn-design w-100 fs-6" id="join-btn" data-challenge-id="{{ challenge.id }}">인증하기</button>
+                        {% if is_participant %}
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="auth-btn" data-challenge-id="{{ challenge.id }}">인증하기</button>
                         {% else %}
-                            <!-- 비로그인  사용자 : 로그인 페이지로 리디렉션 -->
-                            <button class="btn btn-lg btn-design w-100 fs-6" id="login-btn">Join</button>
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="join-btn" data-challenge-id="{{ challenge.id }}">참가하기</button>
                         {% endif %}
-                        <!-- Join을 누르면 링크로 연결됨. 프로젝트 구조상, 유저가 join을 클릭하면, alert로 참여하시겠습니까? 
-                        (Y/N)를 보여주고, Y를 누르면 등록된 페이지로 이동하고, N를 누르면 single 페이지에 남게 됨. -->
-                        
-                        <!-- 회원 패턴 -->
-                        <!-- 1. 참여하기 버튼을 누름 
-                             2. 참여하시겠습니까? (Y/N) (Alert)
-                             3. Y: 참가자 상세 페이지 이동, N: 챌린지 상세 페이지 (그대로) -->
-                        
-                        <!-- 비회원 패턴 -->
-                        <!-- 1. 참여하기 버튼을 누름 
-                             2. 로그인 페이지로 Redirection
-                             3. 로그인 후 : 챌린지 상세 페이지로 Redirection -->
                     </div>
                 </div>
             </div>
@@ -98,23 +77,24 @@
 
 
     <script>
-        // 로그인한 사용자의 참가 기능
         document.getElementById('join-btn')?.addEventListener('click', function() {
-            //참여 여부를 묻는 경고창
-            if (confirm("이 챌린지에 참여하시겠습니까? (Y/N)")) {
-                var challengeId = this.getAttribute('data-challenge-id');
-                //참가하는 경우: 참여를 처리하는 페이지로 이동 (참가자만 볼 수 있는 페이지)
-                window.location.href = '/join/';
+            var challengeId = this.getAttribute('data-challenge-id');
+            if (confirm("챌린지에 참가하지 않은 사용자입니다. 참가하시겠습니까?")) {
+                window.location.href = "/join_challenge/" + challengeId + "/";
             } else {
-                // 취소하는 경우: 현재 페이지에 그대로 머무름
-                alert('참여를 취소했습니다.')
+                alert('참여를 취소했습니다.');
             }
         });
 
-        // 비로그인 사용자는 로그인 페이지로 리디렉션
+        document.getElementById('auth-btn')?.addEventListener('click', function() {
+            var challengeId = this.getAttribute('data-challenge-id');
+            // 인증 페이지로 이동하는 로직 추가
+            window.location.href = "/authenticate_challenge/" + challengeId + "/";
+        });
+
         document.getElementById('login-btn')?.addEventListener('click', function() {
             alert('참여하려면 로그인해야 합니다.');
-            window.location.href = '/account/login/';
+            window.location.href = "{% url 'login' %}";
         });
     </script>
 

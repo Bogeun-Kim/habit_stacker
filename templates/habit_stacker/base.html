@@ -12,45 +12,46 @@
         <div class="container px-4 px-lg-5">
             <a class="navbar-brand" href="{% url 'main_page' %}">
                 {% load static %}
-                <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;"></a>
+                <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;">
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+            <div class="collapse navbar-collapse justify-content-between" id="navbarSupportedContent">
+                <ul class="navbar-nav mb-2 mb-lg-0">
                     <!-- 여기에 추가 메뉴 항목을 넣을 수 있습니다 -->
                 </ul>
-                <!-- 검색창 -->
-                <form class="d-flex me-4">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                
+                <!-- 검색창 (중앙 정렬) -->
+                <form class="d-flex mx-auto">
+                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" style="width: 300px;">
+                    <button class="btn btn-outline-dark" type="submit">Search</button>
                 </form>
-
-                <!-- 챌린지 생성 -->
-                <form class="d-flex me-2" action="{% url 'challenge_form' %}" method="GET">
-                    <button class="btn btn-outline-dark" type="submit">
-                        Create
-                    </button>
-                </form>
-
-                <!-- 로그인/로그아웃 버튼 -->
-                {% if user.is_authenticated %}
-                <form class="d-flex" action="{% url 'logout' %}" method="POST">
-                    {% csrf_token %}
-                    <button class="btn btn-outline-dark" type="submit">
-                        <img src="{% static 'profile.svg' %}" alt="Log Out" style="width: 20px; height: auto;">
-                    </button>
-                </form>
-                {% else %}
-                <form class="d-flex me-2" action="{% url 'login' %}" method="GET">
-                    <button class="btn btn-outline-dark" type="submit">
-                        Log In
-                    </button>
-                </form>
-                <form class="d-flex" action="{% url 'signup' %}" method="GET">
-                    <button class="btn btn-outline-dark" type="submit">
-                        Sign Up
-                    </button>
-                </form>
-                {% endif %}
+                
+                <div class="d-flex align-items-center">
+                    <!-- 로그인/로그아웃 버튼 -->
+                    {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-dark dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img class="profile" src="{% static 'profile.svg' %}" alt="Profile" style="width: 20px; height: auto;">
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                            <li><a class="dropdown-item" href="#">My page</a></li>
+                            <li><a class="dropdown-item" href="{% url 'challenge_form' %}">Create</a></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <form class="d-flex me-2" action="{% url 'login' %}" method="GET">
+                        <button class="btn btn-outline-dark" type="submit">
+                            Log In
+                        </button>
+                    </form>
+                    <form class="d-flex" action="{% url 'signup' %}" method="GET">
+                        <button class="btn btn-outline-dark" type="submit">
+                            Sign Up
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>

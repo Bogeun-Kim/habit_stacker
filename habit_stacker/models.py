@@ -50,8 +50,13 @@ class ChallengeParticipant(models.Model):
 
     # ChallengeParticipant 객체가 출력될 때, 참가한 사용자의 username과 해당 사용자가 참여한 챌린지의 title이 표시되도록 설정했음
     # 예) Newuser2 - 5km running
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'challenge'], name='unique_user_challenge')
+        ]
+
     def __str__(self):
-        return f'{self.user.username} - {self.challenge.title}'
+        return f"{self.user.username} - {self.challenge.title}"
     
 class User(models.Model):
     email = models.EmailField(unique=True)

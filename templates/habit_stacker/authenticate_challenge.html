@@ -1,0 +1,265 @@
+{% extends 'habit_stacker/base.html' %}
+
+{% block main_area %}
+<div class="container">
+    <h2>챌린지 인증</h2>
+
+    <div class="challenge-info">
+        <pre>{{ challenge_info }}</pre>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chat-container">
+                <h3>챌린지 채팅방</h3>
+                <div id="chat-messages" class="chat-messages">
+                    <!-- 채팅 메시지가 여기에 표시됩니다 -->
+                </div>
+                <div id="chat-container">
+                    <div id="chat-messages"></div>
+                    <div id="chat-input">
+                        <input type="text" id="user-input" placeholder="메시지를 입력하세요...">
+                        <input type="file" id="image-input" accept="image/*">
+                        <button id="send-button">전송</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <h3>다른 참가자들의 인증</h3>
+            <div id="other-authentications">
+                <!-- 여기에 다른 참가자들의 인증 내용을 표시합니다 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let sendMessage; // 전역 변수로 선언
+
+document.addEventListener('DOMContentLoaded', function() {
+    // challengeId 변수 설정 (Django 템플릿 변수 사용)
+    const challengeId = "{{ challenge.id }}";
+    let selectedImage = null;
+    let currentPage = 1;
+    let isLoading = false;
+
+    async function loadChatHistory(page = 1) {
+        if (isLoading) return;
+        isLoading = true;
+        try {
+            const response = await fetch(`/api/challenge/${challengeId}/chat-history/?page=${page}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const chatMessages = document.getElementById('chat-messages');
+
+            if (page === 1) {
+                chatMessages.innerHTML = '';
+            }
+
+            data.history.forEach(message => {
+                const messageElement = createMessageElement(message);
+                if (page === 1) {
+                    chatMessages.appendChild(messageElement);
+                } else {
+                    chatMessages.insertBefore(messageElement, chatMessages.firstChild);
+                }
+            });
+
+            if (page === 1) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            currentPage = page;
+        } catch (error) {
+            console.error('채팅 기록을 불러오는 중 오류 발생:', error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    function createMessageElement(message) {
+        console.log("Creating message element for:", message);  // 디버깅을 위한 로그
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message';
+        messageElement.innerHTML = `<strong>${message.user}:</strong> ${message.message}`;
+        if (message.image_url) {
+            messageElement.innerHTML += `<br><img src="${message.image_url}" alt="인증 이미지" style="max-width: 200px;">`;
+        }
+        return messageElement;
+    }
+
+    document.getElementById('chat-messages').addEventListener('scroll', function(e) {
+        if (e.target.scrollTop === 0 && !isLoading) {
+            loadChatHistory(currentPage + 1);
+        }
+    });
+
+    sendMessage = async function() {
+        var userInput = document.getElementById('user-input');
+        var message = userInput.value.trim();
+        var imageInput = document.getElementById('image-input');
+        if (message || imageInput.files.length > 0) {
+            var formData = new FormData();
+            formData.append('challenge_id', challengeId);
+            formData.append('message', message);
+            if (imageInput.files.length > 0) {
+                formData.append('image', imageInput.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/challenge/chat/', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const messages = chunk.split('\n').filter(Boolean);
+
+                    for (const message of messages) {
+                        try {
+                            const data = JSON.parse(message);
+                            console.log("Received data:", data);  // 디버깅을 위한 로그
+                            if (data.status === 'success') {
+                                addMessage(data.message);
+                            } else {
+                                console.error('메시지 처리 실패:', data.error);
+                            }
+                        } catch (error) {
+                            console.error('JSON 파싱 오류:', error, 'Raw message:', message);
+                        }
+                    }
+                }
+
+                // 입력 필드 초기화
+                userInput.value = '';
+                imageInput.value = '';
+
+            } catch (error) {
+                console.error('에러:', error);
+            }
+        }
+    };
+
+    // 이벤트 리스너 설정
+    const sendButton = document.getElementById('send-button');
+    if (sendButton) {
+        sendButton.addEventListener('click', sendMessage);
+    }
+
+    const userInput = document.getElementById('user-input');
+    if (userInput) {
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    const imageInput = document.getElementById('image-input');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(event) {
+            selectedImage = event.target.files[0];
+            if (sendButton) {
+                sendButton.textContent = '이미지 선택됨';
+            }
+        });
+    }
+
+    function addMessage(message) {
+        var chatMessages = document.getElementById('chat-messages');
+        var messageElement = createMessageElement(message);
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // CSRF 토큰을 가져오는 함수
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 다른 참가자들의 인증 내용을 가져오는 함수
+    function fetchOtherAuthentications() {
+        fetch(`/api/challenge/${challengeId}/authentications/`)
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('other-authentications');
+                data.authentications.forEach(auth => {
+                    const authElement = document.createElement('div');
+                    authElement.className = 'authentication-item';
+                    authElement.innerHTML = `
+                        <p><strong>${auth.user}:</strong> ${auth.text}</p>
+                        <p><small>${new Date(auth.created_at).toLocaleString()}</small></p>
+                        ${auth.file_url ? `<img src="${auth.file_url}" alt="인증 이미지" style="max-width: 200px;">` : ''}
+                        <hr>
+                    `;
+                    container.appendChild(authElement);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // 페이지 로드 시 초기 채팅 기록 불러오기
+    loadChatHistory();
+
+    // 페이지 로드 시 다른 참가자들의 인증 내용을 가져옵니다
+    fetchOtherAuthentications();
+
+    // 주기적으로 인증 내용을 업데이트합니다
+    setInterval(fetchOtherAuthentications, 60000); // 1분마다 업데이트
+});
+</script>
+
+<style>
+    .chat-container {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        margin-bottom: 10px;
+    }
+    .chat-input {
+        display: flex;
+    }
+    .chat-input input[type="text"] {
+        flex-grow: 1;
+        margin-right: 10px;
+    }
+    .message {
+        margin-bottom: 10px;
+    }
+    .message img {
+        display: block;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}

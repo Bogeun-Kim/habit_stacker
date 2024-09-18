@@ -2,6 +2,8 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
 import bcrypt
+from django.conf import settings
+from django.utils import timezone
 
 # Create your models here.
 class Challenge(models.Model):
@@ -47,6 +49,7 @@ class ChallengeParticipant(models.Model):
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE,related_name='participants')
     join_data = models.DateTimeField(auto_now_add=True) # 참가한 날짜 및 시간 기록
     is_verified = models.BooleanField(default=False) # 사용자가 해당 챌린지에서 인증을 완료했는지 여부를 저장하는 필드, 기본값(default)는 False임. 사용자가 인증을 완료하면 True로 변경할 수 있음
+    last_authentication_date = models.DateTimeField(null=True, blank=True)
 
     # ChallengeParticipant 객체가 출력될 때, 참가한 사용자의 username과 해당 사용자가 참여한 챌린지의 title이 표시되도록 설정했음
     # 예) Newuser2 - 5km running
@@ -68,3 +71,22 @@ class User(models.Model):
 
     def check_password(self, raw_password):
         return bcrypt.checkpw(raw_password.encode(), self.password.encode())
+
+class ChallengeAuthentication(models.Model):
+    participant = models.ForeignKey(ChallengeParticipant, on_delete=models.CASCADE)
+    text = models.TextField()
+    file = models.FileField(upload_to='challenge_authentications/', null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.participant} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+    
+class ChatMessage(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)  # null=True, blank=True 추가
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='chat_images/', null=True, blank=True)  # 이 줄을 추가합니다
+
+    def __str__(self):
+        return f"{self.user.username if self.user else 'AI'}: {self.message[:50]}"

@@ -32,9 +32,13 @@ urlpatterns = [
     path('single_challenge_page/<int:pk>/', views.single_challenge_page, name='single_challenge_page'),
     path('join_challenge/<int:challenge_id>/', views.join_challenge, name='join_challenge'),
     path('<int:pk>/joined_challenge/', views.joined_challenge_page, name='joined_challenge'),
-    path('authenticate_challenge/<int:challenge_id>/', views.authenticate_challenge, name='authenticate_challenge'),
     path('challenge_form/', views.create_challenge, name='challenge_form'),
+    path('api/challenge/chat/', views.chat_message, name='chat_message'),
+    path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),
+    path('api/challenge/<int:challenge_id>/authentications/', views.challenge_authentications, name='challenge_authentications'),
+    path('api/challenge/<int:challenge_id>/chat-history/', views.get_chat_history, name='get_chat_history'),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

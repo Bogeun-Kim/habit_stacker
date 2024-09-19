@@ -1,0 +1,103 @@
+{% extends 'habit_stacker/base.html' %}
+
+{% block main_area %}
+    <!-- Page content-->
+    <div class="container px-4 px-lg-5 mt-5">
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Post content-->
+                <article>
+                    <!-- Preview image figure-->
+                    <figure class="mb-4"><img class="img-fluid rounded" src="https://dummyimage.com/900x400/ced4da/6c757d.jpg" alt="..." /></figure>
+                    <!-- Post content-->
+                    <section class="mb-5">
+                        <!-- Card Navigation -->
+                        <div class="card text-center">
+                            <div class="card-header">
+                              <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">챌린지 소개</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="auth1-tab" data-bs-toggle="tab" data-bs-target="#auth1" type="button" role="tab" aria-controls="auth1" aria-selected="false">나의 인증 현황</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="auth2-tab" data-bs-toggle="tab" data-bs-target="#auth2" type="button" role="tab" aria-controls="auth2" aria-selected="false">참가자들의 인증 현황</button>
+                                </li>
+                              </ul>
+                            </div>
+                            <div class="tab-content" id="myTabContent">
+                                <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                                    <h5 class="card-title fw-bolder">Overview Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">{{ challenge.description }}</p>
+                                    <p class="card-text">기본정보 : </p>
+                                    <p class="card-text">카테고리 : </p>
+                                    <p class="card-text">진행상태 : </p>
+                                    <p class="card-text">인증샷 예시 : </p>
+                                    <p class="card-text">챌린지 진행 시 꼭 확인해주세요! : </p>
+                                </div>
+
+                                <div class="tab-pane fade" id="auth1" role="tabpanel" aria-labelledby="auth1-tab">
+                                    <h5 class="card-title fw-bolder">Authentication Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">여긴 내 인증 사진</p>
+                                </div>
+                                <div class="tab-pane fade" id="auth2" role="tabpanel" aria-labelledby="auth2-tab">
+                                    <h5 class="card-title fw-bolder">Authentication Tab</h5>
+                                    <p class="card-text"></p>
+                                    <p class="card-text">여긴 참가자 인증 사진</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+                </article>
+
+            </div>
+            <!-- Side widgets-->
+            <div class="col-lg-4">
+                <!-- Side widget-->
+                <div class="card mb-4">
+                    <div class="card-header">Challenge Manager</div>
+                    <div class="card-body">
+                        <p><strong>Challenge Title : </strong>{{ challenge.title }}</p>
+                        <p><strong>Challenge Duration : </strong>{{ challenge.duration }}</p>
+                        <hr/>
+                        {% if is_participant %}
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="auth-btn" data-challenge-id="{{ challenge.id }}">인증하기</button>
+                        {% else %}
+                            <button class="btn btn-lg btn-design w-100 fs-6" id="join-btn" data-challenge-id="{{ challenge.id }}">참가하기</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+
+    <script>
+        document.getElementById('join-btn')?.addEventListener('click', function() {
+            var challengeId = this.getAttribute('data-challenge-id');
+            if (confirm("챌린지에 참가하지 않은 사용자입니다. 참가하시겠습니까?")) {
+                // 챌린지 참가 로직 (필요한 경우 API 호출 등을 추가)
+                // 참가 후 인증 페이지로 이동
+                window.location.href = "/challenge/" + challengeId + "/authenticate/";
+            } else {
+                alert('참여를 취소했습니다.');
+            }
+        });
+
+        document.getElementById('auth-btn')?.addEventListener('click', function() {
+            var challengeId = this.getAttribute('data-challenge-id');
+            // 인증 페이지로 이동하는 로직 수정
+            window.location.href = "/challenge/" + challengeId + "/authenticate/";
+        });
+
+        document.getElementById('login-btn')?.addEventListener('click', function() {
+            alert('참여하려면 로그인해야 합니다.');
+            window.location.href = "{% url 'login' %}";
+        });
+    </script>
+
+{% endblock %}

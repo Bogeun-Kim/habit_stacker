@@ -27,8 +27,7 @@ class Challenge(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     duration = models.CharField(max_length=20, choices=DURATION_CHOICES, default='For 1 week')
-    
-    
+    image = models.ImageField(upload_to='challenge_images/', null=True, blank=True)
 
     def __str__(self):
         return f'[{self.pk}] {self.title}'

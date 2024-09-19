@@ -60,12 +60,40 @@ class LoginForm(forms.Form):
 class ChallengeForm(forms.ModelForm):
     class Meta:
         model = Challenge
-        fields = ['title', 'description', 'duration', 'category']
+        fields = ['title', 'description', 'duration', 'category', 'image']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'duration': forms.Select(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'image': forms.FileInput(attrs={'class': 'form-control-file'}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
-        #추가 유효성 검사
+        # 추가 유효성 검사가 필요한 경우 여기에 구현
         return cleaned_data
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '챌린지 제목'
+        })
+        self.fields['description'].widget.attrs.update({
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': '챌린지 설명'
+        })
+        self.fields['duration'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '챌린지 기간'
+        })
+        self.fields['category'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '챌린지 카테고리'
+        })
+        self.fields['image'].widget.attrs.update({
+            'class': 'form-control-file',
+            'placeholder': '챌린지 이미지'
+        })

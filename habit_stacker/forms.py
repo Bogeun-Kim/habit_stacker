@@ -67,6 +67,7 @@ class ChallengeForm(forms.ModelForm):
             'duration': forms.Select(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control-file'}),
+            'note': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 
     def clean(self):

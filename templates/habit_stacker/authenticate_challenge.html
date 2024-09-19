@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // challengeId 변수 설정 (Django 템플릿 변수 사용)
     const challengeId = "{{ challenge.id }}";
     const userId = "{{ user.id }}";
+    const user = "{{ user.username }}";
     const isAi = "{{ is_ai }}";
     let selectedImage = null;
     let currentPage = 1;
@@ -98,17 +99,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // 사용자 메시지 먼저 추가
-            addMessage({
+            let usermessage = addMessage({
                 message: message,
                 is_ai: false,
-                user: '사용자',
+                user: user,
                 image_url: imageInput.files.length > 0 ? URL.createObjectURL(imageInput.files[0]) : null
             });
 
             // 로딩 메시지 추가
             let loadingMessageId = addMessage({
                 message: "Loading...",
-                is_ai: true
+                is_ai: true,
+                user: 'AI'
             });
 
             try {
@@ -135,8 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const data = JSON.parse(message);
                             if (data.status === 'success') {
                                 if (data.message.is_ai) {
-                                    removeMessage(loadingMessageId);
-                                    addMessage(data.message);
+                                    updateMessage(loadingMessageId, data.message);
                                     aiResponseReceived = true;
                                 }
                             } else {
@@ -155,19 +156,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         is_ai: true
                     });
                 }
-
                 // 입력 필드 초기화
                 userInput.value = '';
                 imageInput.value = '';
                 customFileUpload.textContent = '챌린지 인증';
             } catch (error) {
                 console.error('에러:', error);
-                // 오류 발생 시 로딩 메시지를 오류 메시지로 변경
-                updateMessage(loadingMessageId, {
-                    message: "오류가 발생했습니다. 다시 시도해 주세요.",
-                    is_ai: true
-                });
-            }
+                // 오류 발생 시 로딩 메시지를 삭제
+                removeMessage(loadingMessageId);
+            } finally {
+                // 모든 필드 초기화
+                userInput.value = '';
+                imageInput.value = '';
+                customFileUpload.textContent = '챌린지 인증';
+                }
         }
     };
 
@@ -214,7 +216,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-        return messageElement.id = 'message-' + Date.now(); // 고유 ID 반환
+        // 고유 ID를 0.01초 단위까지 포함하여 반환
+        const uniqueId = (message.is_ai ? 'message-' : 'user-') + Date.now() + '-' + (new Date().getMilliseconds() / 10).toFixed(2);
+        messageElement.id = uniqueId;
+        return uniqueId;
     }
 
     function removeMessage(messageId) {
@@ -227,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMessage(messageId, newMessage) {
         const messageElement = document.getElementById(messageId);
         if (messageElement) {
-            messageElement.innerHTML = `<strong>${newMessage.is_ai ? 'AI' : '사용자'}:</strong> ${newMessage.message}`;
+            messageElement.innerHTML = `<strong>${newMessage.is_ai ? 'AI' : newMessage.user}:</strong> ${newMessage.message}`;
             if (newMessage.image_url) {
                 messageElement.innerHTML += `<br><img src="${newMessage.image_url}" alt="Uploaded image" style="max-width: 200px;">`;
             }

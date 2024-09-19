@@ -17,6 +17,8 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
 import json
 from asgiref.sync import sync_to_async
 from openai import OpenAI
@@ -27,7 +29,7 @@ from PIL import Image
 import io
 
 from .settings import OPENAI_API_KEY
-from .models import Challenge, ChallengeParticipant, User, ChallengeAuthentication, ChatMessage
+from .models import Challenge, ChallengeParticipant, User, ChallengeAuthentication, ChatMessage, Authentication
 from .forms import SignUpForm, LoginForm, ChallengeForm
 from .chatgpt_assistant import ChatGPTAssistant
 import logging
@@ -82,6 +84,7 @@ async def get_chat_history(request, challenge_id, user_id):
         return JsonResponse({'status': 'error', 'error': '서버 오류가 발생했습니다.'}, status=500)
     
 @require_POST
+@login_required
 @csrf_exempt
 async def chat_message(request):
     try:
@@ -90,16 +93,21 @@ async def chat_message(request):
         elif request.content_type.startswith('multipart/form-data'):
             data = request.POST
         else:
+            logger.error(f"Unsupported content-type: {request.content_type}")
             return JsonResponse({'status': 'error', 'error': '지원되지 않는 content-type입니다.'}, status=400)
 
         challenge_id = data.get('challenge_id')
-        message = data.get('message')  # 메시지가 없을 경우 빈 문자열로 설정
+        message = data.get('message', '')
         image = request.FILES.get('image')
-        
+
+        logger.info(f"Received request - challenge_id: {challenge_id}, message: {message}, image: {image is not None}")
+
         if not challenge_id:
+            logger.error("Missing challenge_id")
             return JsonResponse({'status': 'error', 'error': '챌린지 ID는 필수입니다.'}, status=400)
-        
+
         if not message and not image:
+            logger.error("Missing both message and image")
             return JsonResponse({'status': 'error', 'error': '메시지나 이미지 중 하나는 필수입니다.'}, status=400)
         
         get_challenge = sync_to_async(Challenge.objects.get)
@@ -117,6 +125,15 @@ async def chat_message(request):
         
         assistant = ChatGPTAssistant()
         
+        # 챌린지별 어시스턴트 생성 또는 업데이트 (모든 필요한 정보 전달)
+        await assistant.create_or_update_assistant(
+            challenge_id,
+            challenge.title,
+            challenge.duration,
+            challenge.description,
+            challenge.category
+        )
+        
         create_chat_message = sync_to_async(ChatMessage.objects.create)
         user_message = await create_chat_message(
             challenge=challenge,
@@ -124,6 +141,16 @@ async def chat_message(request):
             message=message,
             image=image if image else None
         )
+
+        # 이미지가 포함되어 있으면 챌린지 인증 진행
+        if image:
+            create_authentication = sync_to_async(Authentication.objects.create)
+            await create_authentication(
+                user=user,
+                challenge=challenge,
+                text=message,
+                file=image
+            )
 
         user_response = {
             'status': 'success',
@@ -137,38 +164,44 @@ async def chat_message(request):
             }
         }
 
-        async def stream_response():
-            yield json.dumps(user_response).encode('utf-8') + b'\n'
+        image_data = None
+        if image:
+            # 이미지 파일이 저장된 후 WebP로 변환 후 base64로 인코딩
+            await sync_to_async(default_storage.save)(image.name, image)
+            with default_storage.open(image.name, 'rb') as f:
+                img = Image.open(f)
+                img = img.convert('RGB')  # WebP는 알파 채널을 지원하지 않으므로 RGB로 변환
+                buffer = io.BytesIO()
+                img.save(buffer, format="WebP")
+                image_data = buffer.getvalue()  # bytes 타입으로 변환
+        
+        ai_response = await assistant.process_chat_message_async(user.id, challenge_id, message, image_data)
 
-            image_data = None
-            if image:
-                image_data = await sync_to_async(image.read)()
-            
-            ai_response = await assistant.process_chat_message_async(user.id, challenge_id, message, image_data)
+        ai_message = await create_chat_message(
+            challenge=challenge,
+            user=user,
+            message=ai_response,
+            is_ai=True
+        )
 
-            ai_message = await create_chat_message(
-                challenge=challenge,
-                user=user,
-                message=ai_response,
-                is_ai=True
-            )
-
-            ai_response = {
-                'status': 'success',
-                'message': {
-                    'id': ai_message.id,
-                    'user': 'AI',
-                    'message': ai_message.message,
-                    'timestamp': ai_message.timestamp.isoformat(),
-                    'image_url': None,
-                    'is_ai': True
-                }
+        ai_response = {
+            'status': 'success',
+            'message': {
+                'id': ai_message.id,
+                'user': 'AI',
+                'message': ai_message.message,
+                'timestamp': ai_message.timestamp.isoformat(),
+                'image_url': None,
+                'is_ai': True
             }
+        }
 
-            yield json.dumps(ai_response).encode('utf-8') + b'\n'
+        response_data = [user_response, ai_response]
+        return StreamingHttpResponse((json.dumps(data).encode('utf-8') + b'\n' for data in response_data), content_type='application/json')
 
-        return StreamingHttpResponse(stream_response(), content_type='application/json')
-
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON in request body")
+        return JsonResponse({'status': 'error', 'error': '잘못된 JSON 형식입니다.'}, status=400)
     except Exception as e:
         logger.exception("Unexpected error in chat_message view")
         return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
@@ -214,15 +247,41 @@ def get_authentications(request, challenge_id):
         auth_list.append(auth_data)
     return JsonResponse({'authentications': auth_list})
 
+@login_required
+def my_challenge_authentications(request, challenge_id):
+    try:
+        challenge = Challenge.objects.get(id=challenge_id)
+        authentications = Authentication.objects.filter(challenge=challenge, user=request.user).order_by('-created_at')
+        
+        auth_data = [{
+            'text': auth.text,
+            'file_url': auth.file.url if auth.file else None,
+            'created_at': auth.created_at.isoformat()
+        } for auth in authentications]
+        
+        return JsonResponse({'authentications': auth_data})
+    except Challenge.DoesNotExist:
+        return JsonResponse({'error': 'Challenge not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def challenge_authentications(request, challenge_id):
-    authentications = ChallengeAuthentication.objects.filter(participant__challenge_id=challenge_id).order_by('-created_at')[:10]  # 최근 10개만 가져옵니다
-    data = [{
-        'user': auth.participant.user.username,
-        'text': auth.text,
-        'file_url': auth.file.url if auth.file else None,
-        'created_at': auth.created_at.isoformat()
-    } for auth in authentications]
-    return JsonResponse(data, safe=False)
+    try:
+        challenge = Challenge.objects.get(id=challenge_id)
+        authentications = Authentication.objects.filter(challenge=challenge).order_by('-created_at')
+        
+        auth_data = [{
+            'user': auth.user.username,
+            'text': auth.text,
+            'file_url': auth.file.url if auth.file else None,
+            'created_at': auth.created_at.isoformat()
+        } for auth in authentications]
+        
+        return JsonResponse({'authentications': auth_data})
+    except Challenge.DoesNotExist:
+        return JsonResponse({'error': 'Challenge not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def authenticate_challenge(request, challenge_id):
@@ -245,19 +304,17 @@ def authenticate_challenge(request, challenge_id):
     
     return render(request, 'habit_stacker/authenticate_challenge.html', context)
 
-@csrf_protect
 def create_challenge(request):
     if request.method == 'POST':
         form = ChallengeForm(request.POST)
         if form.is_valid():
             challenge = form.save(commit=False)
-            challenge.creator = request.user
+            challenge.created_at = timezone.now()
             challenge.save()
-            return redirect('main_page')
+            return redirect('challenge_detail', pk=challenge.pk)
     else:
         form = ChallengeForm()
-    
-    return render(request, 'habit_stacker/challenge_form.html', {'form': form})
+    return render(request, 'habit_stacker/create_challenge.html', {'form': form})
 
 def single_challenge_page(request, pk):
     challenge = get_object_or_404(Challenge, pk=pk)

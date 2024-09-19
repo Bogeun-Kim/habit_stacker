@@ -6,38 +6,63 @@ import base64
 class ChatGPTAssistant:
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.assistant_id = None
+        self.assistant_ids = {}
+        self.challenge_contexts = {}
 
-    async def create_or_update_assistant(self):
-        # 기존 어시스턴트가 있는지 확인
-        assistants = await self.client.beta.assistants.list()
-        existing_assistant = next((a for a in assistants.data if a.name == "HabitStackerAssistant"), None)
+    async def create_or_update_assistant(self, challenge_id, challenge_title, challenge_duration, challenge_description, challenge_category):
+        # 챌린지 컨텍스트 저장
+        self.challenge_contexts[challenge_id] = {
+            "title": challenge_title,
+            "duration": challenge_duration,
+            "description": challenge_description,
+            "category": challenge_category
+        }
 
-        instructions = """
-        당신은 HabitStacker 앱의 AI 어시스턴트입니다. 사용자들의 챌린지를 돕고, 동기부여를 제공하며, 
-        건강한 챌린지 달성에 대한 조언을 제공합니다. 항상 긍정적이고 격려하는 톤을 유지하세요. 
-        사용자의 질문에 대해 간결하고 명확하게 답변하되, 필요한 경우 추가적인 정보나 팁을 제공하세요.
-        사용자가 인증 사진을 업로드하면 이를 분석하고 설명해주세요. 특히 습관 인증과 관련된 내용이 있다면 언급해주고 챌린지에 대한 영감을 주는 내용이 있다면 언급해주세요. 챌린지 인증을 축하합니다!
+        instructions = f"""
+        You are the AI assistant for the HabitStacker app's challenge: {challenge_title}. 
+        This challenge lasts for {challenge_duration} and falls under the category of {challenge_category}.
+        Challenge Description: {challenge_description}
+
+        Your role:
+        1. Help users understand and stay committed to this specific challenge.
+        2. Provide motivation and encouragement tailored to this challenge's goals.
+        3. Offer advice on achieving this challenge, considering its duration and category.
+        4. Answer user questions concisely and clearly, always in the context of this challenge.
+        5. When users upload verification photos, analyze them in relation to this challenge's requirements.
+        6. Mention anything particularly relevant to this challenge's certification process.
+        7. Provide inspiration specific to this challenge when appropriate.
+
+        Always maintain a positive and encouraging tone, and keep the focus on this particular challenge.
         """
 
-        if existing_assistant:
-            # 기존 어시스턴트 업데이트
-            updated_assistant = await self.client.beta.assistants.update(
-                assistant_id=existing_assistant.id,
-                instructions=instructions,
-                model="gpt-4-turbo-preview",
-                tools=[{"type": "code_interpreter"}]
-            )
-            return updated_assistant.id
-        else:
-            # 새 어시스턴트 생성
-            new_assistant = await self.client.beta.assistants.create(
-                name="HabitStackerAssistant",
-                instructions=instructions,
-                model="gpt-4-turbo-preview",
-                tools=[{"type": "code_interpreter"}]
-            )
-            return new_assistant.id
+        try:
+            # 기존 어시스턴트 찾기
+            assistants = await self.client.beta.assistants.list()
+            existing_assistant = next((a for a in assistants.data if a.name == f"HabitStackerAssistant_{challenge_id}"), None)
+
+            if existing_assistant:
+                # 기존 어시스턴트 업데이트
+                updated_assistant = await self.client.beta.assistants.update(
+                    assistant_id=existing_assistant.id,
+                    instructions=instructions,
+                    model="gpt-4-turbo-preview",
+                    tools=[{"type": "code_interpreter"}]
+                )
+                self.assistant_ids[challenge_id] = updated_assistant.id
+            else:
+                # 새 어시스턴트 생성
+                new_assistant = await self.client.beta.assistants.create(
+                    name=f"HabitStackerAssistant_{challenge_id}",
+                    instructions=instructions,
+                    model="gpt-4-turbo-preview",
+                    tools=[{"type": "code_interpreter"}]
+                )
+                self.assistant_ids[challenge_id] = new_assistant.id
+
+            return self.assistant_ids[challenge_id]
+        except Exception as e:
+            print(f"Error creating/updating assistant: {str(e)}")
+            return None
 
     async def get_or_create_thread(self, user_id, challenge_id):
         thread_id = cache.get(f'thread_id_{user_id}_{challenge_id}')
@@ -54,10 +79,14 @@ class ChatGPTAssistant:
             content=message
         )
 
-    async def run_assistant(self, thread_id):
+    async def run_assistant(self, thread_id, challenge_id):
+        assistant_id = self.assistant_ids.get(challenge_id)
+        if not assistant_id:
+            raise ValueError("Assistant ID not found for the given challenge_id")
+
         run = await self.client.beta.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=self.assistant_id
+            assistant_id=assistant_id
         )
         while run.status != 'completed':
             run = await self.client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
@@ -67,40 +96,71 @@ class ChatGPTAssistant:
         messages = await self.client.beta.threads.messages.list(thread_id=thread_id)
         return messages.data[0].content[0].text.value
 
-    async def process_image(self, image_data):
-        # Base64로 인코딩된 이미지 데이터를 처리
+    async def process_image(self, image_data, challenge_context):
         image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
         response = await self.client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4o-mini-2024-07-18",
             messages=[
+                {
+                    "role": "system",
+                    "content": f"You are analyzing an image for the challenge: {challenge_context['title']}. "
+                               f"This challenge is about {challenge_context['description']} and lasts for {challenge_context['duration']}. "
+                               f"It falls under the category of {challenge_context['category']}. "
+                               f"Please analyze the image in the context of this challenge."
+                },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "챌린지에 대한 인증 사진입니다. 이 사진을 분석하고 설명해주세요. 특히 습관 인증과 관련된 내용이 있다면 언급해주고 챌린지에 대한 영감을 주는 내용이 있다면 언급해주세요. 챌린지 인증을 축하합니다!"},
+                        {"type": "text", "text": "Please analyze this image in the context of the challenge."},
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/webp;base64,{image_base64}"
+                                "url": f"data:image/jpeg;base64,{image_base64}"
                             }
                         }
                     ]
                 }
-            ]
+            ],
+            max_tokens=300
         )
+        
         return response.choices[0].message.content
 
-    async def process_chat_message_async(self, user_id, challenge_id, message=None, image_data=None):
-        if message is None or message == "":
-            message = "I participated in the challenge. Please encourage me and let me know if there are any changes I need to make based on my images."
-        if not self.assistant_id:
-            self.assistant_id = await self.create_or_update_assistant()
+    async def process_chat_message_async(self, user_id, challenge_id, message, image_data):
+        challenge_context = self.challenge_contexts.get(challenge_id, {})
+        
+        messages = [
+            {"role": "system", "content": f"You are assisting with the challenge: {challenge_context.get('title')}. "
+                                          f"Duration: {challenge_context.get('duration')}, "
+                                          f"Category: {challenge_context.get('category')}. "
+                                          f"Description: {challenge_context.get('description')}"}
+        ]
 
-        thread_id = await self.get_or_create_thread(user_id, challenge_id)
-        
         if image_data:
-            image_description = await self.process_image(image_data)
-            await self.add_message_to_thread(thread_id, f"사용자가 이미지를 업로드했습니다. 이미지 설명: {image_description}")
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "사용자가 인증 이미지를 업로드했습니다. 이 이미지를 챌린지의 맥락에서 분석해 주세요. 인증을 확인하고 축하해주세요."},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_base64}"
+                        }
+                    }
+                ]
+            })
         
-        await self.add_message_to_thread(thread_id, message)
-        await self.run_assistant(thread_id)
-        return await self.get_assistant_response(thread_id)
+        messages.append({"role": "user", "content": message})
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini-2024-07-18",
+                messages=messages,
+                max_tokens=300
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Error processing message: {str(e)}")
+            return "죄송합니다. 메시지 처리 중 오류가 발생했습니다."

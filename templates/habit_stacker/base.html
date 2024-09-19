@@ -105,6 +105,8 @@
 
 <script>
     const userId = "{{ user.id }}";
+    const isAi = "{{ is_ai }}"
+    const userName = "{{ user.username }}"
     let selectedChallengeId = null;
     let isLoading = false;
 
@@ -191,7 +193,7 @@
         const messageElement = document.createElement('div');
         messageElement.className = `message ${message.is_ai ? 'ai-message' : 'user-message'}`;
         
-        const username = message.is_ai ? 'AI' : message.user;
+        const username = message.is_ai ? 'AI' : userName;
         
         messageElement.innerHTML = `<strong>${username}:</strong> ${message.message}`;
         if (!message.is_ai && message.image_url) {
@@ -219,7 +221,7 @@
             content = typeof message.message === 'string' ? message.message : message.message.content;
         }
         
-        let innerHTML = `<strong>${message.is_ai ? 'AI' : '사용자'}:</strong>`;
+        let innerHTML = `<strong>${message.is_ai ? 'AI' : userName}:</strong>`;
         if (content) {
             innerHTML += ` ${content}`;
         }
@@ -261,8 +263,19 @@
         const imageInput = document.getElementById('image-input');
         
         if (message || imageInput.files.length > 0) {
+            const formData = new FormData();
+            formData.append('challenge_id', selectedChallengeId);
+            
+            if (message) {
+                formData.append('message', message);
+            }
+            
+            if (imageInput.files.length > 0) {
+                formData.append('image', imageInput.files[0]);
+            }
+
             // 사용자 메시지 객체 생성
-            const userMessage = { is_ai: false };
+            const userMessage = { is_ai: false, user: userName };
             
             // 메시지가 있으면 추가
             if (message) {
@@ -271,27 +284,20 @@
             
             // 이미지가 있으면 처리
             if (imageInput.files.length > 0) {
-                const file = imageInput.files[0];
-                const base64Image = await getBase64(file);
-                userMessage.image = base64Image.split(',')[1]; // base64 데이터만 추출
+                userMessage.image_url = URL.createObjectURL(imageInput.files[0]);
             }
             
             // 사용자 메시지 추가 (메시지나 이미지 중 하나라도 있으면)
-            if (userMessage.message || userMessage.image) {
+            if (userMessage.message || userMessage.image_url) {
                 addMessage(userMessage);
             }
             
             // AI 로딩 메시지 추가
             let loadingMessage = addLoadingMessage();
 
-            const formData = new FormData();
-            formData.append('challenge_id', selectedChallengeId);
-            if (message) {
-                formData.append('message', message);
-            }
-            if (imageInput.files.length > 0) {
-                formData.append('image', imageInput.files[0]);
-            }
+            // 입력 필드 초기화
+            chatbotInput.value = '';
+            imageInput.value = '';
 
             try {
                 const response = await fetch('/api/challenge/chat/', {
@@ -329,11 +335,6 @@
                         }
                     }
                 }
-
-                // 입력 필드 초기화
-                chatbotInput.value = '';
-                imageInput.value = '';
-
             } catch (error) {
                 console.error('에러:', error);
                 if (loadingMessage) {
@@ -343,23 +344,12 @@
             }
         }
     }
-
-    // Base64로 이미지 변환
-    function getBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-
     document.addEventListener('DOMContentLoaded', function() {
         // challengeId 변수 설정 (Django 템플릿 변수 사용)
         const challengeId = "{{ challenge.id }}";
         const userId = "{{ user.id }}";
         const isAi = "{{ is_ai }}";
+        const userName = "{{ user.username }}"
         let selectedImage = null;
         let currentPage = 1;
         let isLoading = false;

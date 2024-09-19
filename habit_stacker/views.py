@@ -36,13 +36,26 @@ logger = logging.getLogger(__name__)
 
 from django.core.cache import cache
 
+@login_required
 @require_GET
-async def get_chat_history(request, challenge_id):
+def get_user_challenges(request, user_id):
+    try:
+        user_challenges = Challenge.objects.filter(participants__user=user_id).values('id', 'title')
+        return JsonResponse(list(user_challenges), safe=False)
+    except Exception as e:
+        logger.exception("사용자 챌린지 목록을 가져오는 중 오류 발생")
+        return JsonResponse({'status': 'error', 'error': '서버 오류가 발생했습니다.'}, status=500)
+
+@require_GET
+async def get_chat_history(request, challenge_id, user_id):
     try:
         page = int(request.GET.get('page', 1))
         page_size = 5
 
-        get_messages = sync_to_async(lambda: list(ChatMessage.objects.filter(challenge_id=challenge_id).order_by('-timestamp').select_related('user')))
+        get_messages = sync_to_async(lambda: list(ChatMessage.objects.filter(
+            challenge_id=challenge_id,
+            user_id__in=[user_id, None]  # user_id가 None인 경우 AI 메시지
+        ).order_by('-timestamp').select_related('user')))
         messages = await get_messages()
 
         start = (page - 1) * page_size
@@ -53,10 +66,11 @@ async def get_chat_history(request, challenge_id):
         for message in paginated_messages:
             history.append({
                 'id': message.id,
-                'user': message.user.username if message.user else 'AI',
+                'user': message.user.username if message.user else message.user.username,
                 'message': message.message,
                 'timestamp': message.timestamp.isoformat(),
-                'image_url': message.image.url if message.image else None
+                'image_url': message.image.url if message.image else None,
+                'is_ai': message.is_ai
             })
 
         return JsonResponse({'history': history[::-1]})  # 역순으로 반환
@@ -66,7 +80,7 @@ async def get_chat_history(request, challenge_id):
     except Exception as e:
         logger.exception("get_chat_history에서 예상치 못한 오류 발생")
         return JsonResponse({'status': 'error', 'error': '서버 오류가 발생했습니다.'}, status=500)
-
+    
 @require_POST
 @csrf_exempt
 async def chat_message(request):
@@ -130,8 +144,9 @@ async def chat_message(request):
 
             ai_message = await create_chat_message(
                 challenge=challenge,
-                user=None,
-                message=ai_response
+                user=user,
+                message=ai_response,
+                is_ai=True
             )
 
             ai_response = {
@@ -141,7 +156,8 @@ async def chat_message(request):
                     'user': 'AI',
                     'message': ai_message.message,
                     'timestamp': ai_message.timestamp.isoformat(),
-                    'image_url': None
+                    'image_url': None,
+                    'is_ai': True
                 }
             }
 
@@ -275,8 +291,6 @@ def joined_challenge_page(request, pk):
         'challenge': challenge,
         'is_participant': is_participant,
     }
-    print(is_participant)
-    print(context)
     return render(request, 'habit_stacker/joined_challenge.html', context)
 
 

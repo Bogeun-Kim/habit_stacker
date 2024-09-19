@@ -27,8 +27,7 @@ class Challenge(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     duration = models.CharField(max_length=20, choices=DURATION_CHOICES, default='For 1 week')
-    
-    
+    image = models.ImageField(upload_to='challenge_images/', null=True, blank=True)
 
     def __str__(self):
         return f'[{self.pk}] {self.title}'
@@ -87,6 +86,7 @@ class ChatMessage(models.Model):
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to='chat_images/', null=True, blank=True)  # 이 줄을 추가합니다
+    is_ai = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username if self.user else 'AI'}: {self.message[:50]}"

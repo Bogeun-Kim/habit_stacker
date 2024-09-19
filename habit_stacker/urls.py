@@ -36,7 +36,8 @@ urlpatterns = [
     path('api/challenge/chat/', views.chat_message, name='chat_message'),
     path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),
     path('api/challenge/<int:challenge_id>/authentications/', views.challenge_authentications, name='challenge_authentications'),
-    path('api/challenge/<int:challenge_id>/chat-history/', views.get_chat_history, name='get_chat_history'),
+    path('api/challenge/<int:challenge_id>/chat-history/<int:user_id>/', views.get_chat_history, name='get_chat_history'),
+    path('api/user/challenges/<int:user_id>/', views.get_user_challenges, name='get_user_challenges'),
 ]
 
 if settings.DEBUG:

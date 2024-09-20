@@ -60,7 +60,7 @@ class LoginForm(forms.Form):
 class ChallengeForm(forms.ModelForm):
     class Meta:
         model = Challenge
-        fields = ['title', 'description', 'duration', 'category', 'image']
+        fields = ['title', 'description', 'duration', 'category', 'image', 'note']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -98,3 +98,8 @@ class ChallengeForm(forms.ModelForm):
             'class': 'form-control-file',
             'placeholder': '챌린지 이미지'
         })
+        self.fields['note'].widget.attrs.update({
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': '챌린지 노트'
+        })      

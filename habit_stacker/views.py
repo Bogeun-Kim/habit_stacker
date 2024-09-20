@@ -314,7 +314,7 @@ def create_challenge(request):
             return redirect('challenge_detail', pk=challenge.pk)
     else:
         form = ChallengeForm()
-    return render(request, 'habit_stacker/create_challenge.html', {'form': form})
+    return render(request, 'habit_stacker/challenge_form.html', {'form': form})
 
 def single_challenge_page(request, pk):
     challenge = get_object_or_404(Challenge, pk=pk)

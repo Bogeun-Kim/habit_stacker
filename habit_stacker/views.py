@@ -84,7 +84,6 @@ async def get_chat_history(request, challenge_id, user_id):
         return JsonResponse({'status': 'error', 'error': '서버 오류가 발생했습니다.'}, status=500)
     
 @require_POST
-@login_required
 @csrf_exempt
 async def chat_message(request):
     try:
@@ -283,26 +282,26 @@ def challenge_authentications(request, challenge_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required
-def authenticate_challenge(request, challenge_id):
-    challenge = get_object_or_404(Challenge, id=challenge_id)
+# @login_required
+# def authenticate_challenge(request, challenge_id):
+#     challenge = get_object_or_404(Challenge, id=challenge_id)
     
-    # 사용자가 이 챌린지에 참가했는지 확인
-    is_participant = challenge.participants.filter(user=request.user).exists()
+#     # 사용자가 이 챌린지에 참가했는지 확인
+#     is_participant = challenge.participants.filter(user=request.user).exists()
     
-    if not is_participant:
-        # 참가하지 않은 경우 처리 (예: 에러 메시지 표시 또는 참가 페이지로 리다이렉트)
-        return render(request, 'habit_stacker/error.html', {'message': '이 챌린지에 참가하지 않았습니다.'})
+#     if not is_participant:
+#         # 참가하지 않은 경우 처리 (예: 에러 메시지 표시 또는 참가 페이지로 리다이렉트)
+#         return render(request, 'habit_stacker/error.html', {'message': '이 챌린지에 참가하지 않았습니다.'})
     
-    # 챌린지 정보를 문자열로 변환 (템플릿에서 사용)
-    challenge_info = f"제목: {challenge.title}\n기간: {challenge.duration}\n설명: {challenge.description}"
+#     # 챌린지 정보를 문자열로 변환 (템플릿에서 사용)
+#     challenge_info = f"제목: {challenge.title}\n기간: {challenge.duration}\n설명: {challenge.description}"
     
-    context = {
-        'challenge': challenge,
-        'challenge_info': challenge_info,
-    }
+#     context = {
+#         'challenge': challenge,
+#         'challenge_info': challenge_info,
+#     }
     
-    return render(request, 'habit_stacker/authenticate_challenge.html', context)
+#     return render(request, 'habit_stacker/authenticate_challenge.html', context)
 
 def create_challenge(request):
     if request.method == 'POST':
@@ -311,7 +310,7 @@ def create_challenge(request):
             challenge = form.save(commit=False)
             challenge.created_at = timezone.now()
             challenge.save()
-            return redirect('challenge_detail', pk=challenge.pk)
+            return redirect('main_page')
     else:
         form = ChallengeForm()
     return render(request, 'habit_stacker/challenge_form.html', {'form': form})

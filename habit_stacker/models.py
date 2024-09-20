@@ -96,7 +96,7 @@ class ChatMessage(models.Model):
         return f"{self.user.username if self.user else 'AI'}: {self.message[:50]}"
 
 class Authentication(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
     text = models.TextField(blank=True)
     file = models.FileField(upload_to='authentications/', null=True, blank=True)

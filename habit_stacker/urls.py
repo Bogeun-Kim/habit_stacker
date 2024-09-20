@@ -37,7 +37,7 @@ urlpatterns = [
     path('challenge_form/', views.create_challenge, name='challenge_form'),
     path('api/challenge/chat/', views.chat_message, name='chat_message'),
 
-    path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),
+    # path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),
     path('api/challenge/<int:challenge_id>/authentications/', views.challenge_authentications, name='challenge_authentications'),
     path('api/challenge/<int:challenge_id>/my-authentications/', views.my_challenge_authentications, name='my_challenge_authentications'),
     

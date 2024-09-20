@@ -283,7 +283,7 @@
             }
             
             // 이미지가 있으면 처리
-            if (imageInput.files.length > 0) {
+            if (imageInput) {
                 userMessage.image_url = URL.createObjectURL(imageInput.files[0]);
             }
             

@@ -2,21 +2,24 @@
 {% block main_area %}
 
     <!-- Page content-->
-    <div class="container px-4 px-lg-5 mt-5">
+    <div class="container px-4 px-lg-5 mt-5 mb-5">
         <div class="row">
             <div class="col-12">
-                <h1>Create New Challenge</h1>
+                <h1 class="text-center">새로운 챌린지 만들기</h1>
                 <hr/>
-                <!-- form : 사용자가 기록한 값을 서버로 보내기 위한 용도 -->
-                <!-- enctype="multipart/form-data"는 파일도 같이 전송하겠다는 의미 -->
-                <!-- 원래 HTML 문법에서는 action이 포함되어있어야 함. 그러나 장고는 이런 부분까지 처리해줘서 안써도됨 -->
-                <!-- {% csrf_token %}은 웹사이트를 CSRF 공격으로부터 보호하기 위해 장고가 제공하는 기능임. 꼭 넣어야함 -->
-                
-                <form method="POST" action="{% url 'challenge_form' %}" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     {% for field in form %}
-                        <div class="#">
-                            {{ field }}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {% if field.name == 'image' %}
+                                <input type="{{ field.field.widget.input_type }}" name="{{ field.name }}" class="form-control" id="{{ field.id_for_label }}" accept="image/*">
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
                         </div>
                         {% if field.errors %}
                             <div class="alert alert-danger">
@@ -29,21 +32,9 @@
                             {{ form.non_field_errors }}
                         </div>
                     {% endif %}
-                    <div class="#">
-                        <button type="submit" class="btn btn-primary float-right">Submit</button>
-                    </div>
+                    <button type="submit" class="btn btn-dark">제출</button>
+                    <a href="{% url 'main_page' %}" class="btn btn-light" style="border: 1px solid black">뒤로</a>
                 </form>
-                
-   
-                <!-- {% comment %} <div class="form-group">
-                    {{ form.title }}
-                    {{ form.description }}
-                    {{ form.duration }}
-                    {{ form.category }}
-                    {{ form.image }}
-                </div> {% endcomment %}
-                     -->
-           
             </div>
         </div>
     </div> 

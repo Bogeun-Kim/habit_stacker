@@ -29,12 +29,17 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout, name='logout'),
+    path('search/<str:q>/', views.ChallengeSearch.as_view(), name='challenge_search'),
 
     path('single_challenge_page/<int:pk>/', views.single_challenge_page, name='single_challenge_page'),
     path('join_challenge/<int:challenge_id>/', views.join_challenge, name='join_challenge'),
     path('<int:pk>/joined_challenge/', views.joined_challenge_page, name='joined_challenge'),
+    path('challenge/<int:challenge_id>/authenticate/<int:user_id>/<int:index>/', views.authenticate_challenge, name='authenticate_challenge'),
+    path('get_comments/<int:challenge_id>/<int:user_id>/<int:index>/', views.get_comments, name='get_comments'),
 
     path('challenge_form/', views.create_challenge, name='challenge_form'),
+    path('challenge/<int:challenge_id>/add_comment/<int:user_id>/<int:index>/', views.add_comment, name='add_comment'),
+    path('challenge/<int:challenge_id>/edit_challenge/', views.edit_challenge, name='edit_challenge'),
     path('api/challenge/chat/', views.chat_message, name='chat_message'),
 
     # path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),
@@ -48,3 +53,4 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.CHALLENGE_IMAGE_URL, document_root=settings.CHALLENGE_IMAGE_ROOT)

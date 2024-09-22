@@ -1,6 +1,15 @@
 from django.urls import reverse_lazy
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView
+# Paginator
+from django.core.paginator import Paginator
+
+# 댓글
+# from .models import Comment
+
+# 검색
+from django.db.models import Q
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -27,10 +36,10 @@ from django.conf import settings
 import base64
 from PIL import Image
 import io
-
+import os
 from .settings import OPENAI_API_KEY
-from .models import Challenge, ChallengeParticipant, User, ChallengeAuthentication, ChatMessage, Authentication
-from .forms import SignUpForm, LoginForm, ChallengeForm
+from .models import Challenge, ChallengeParticipant, User, ChallengeAuthentication, ChatMessage, Authentication, Comment
+from .forms import SignUpForm, LoginForm, ChallengeForm, CommentForm, AuthenticationForm
 from .chatgpt_assistant import ChatGPTAssistant
 import logging
 
@@ -271,9 +280,11 @@ def challenge_authentications(request, challenge_id):
         
         auth_data = [{
             'user': auth.user.username,
+            'user_id': auth.user.id,  # user_id 추가
             'text': auth.text,
             'file_url': auth.file.url if auth.file else None,
-            'created_at': auth.created_at.isoformat()
+            'created_at': auth.created_at.isoformat(),
+            'index': auth.index,
         } for auth in authentications]
         
         return JsonResponse({'authentications': auth_data})
@@ -281,6 +292,82 @@ def challenge_authentications(request, challenge_id):
         return JsonResponse({'error': 'Challenge not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_comments(request, challenge_id, user_id, index):
+    comments = Comment.objects.filter(
+        challenge_id=challenge_id,
+        user_id=user_id,
+        authentication_id=index
+    ).order_by('-created_at')
+    
+    comments_data = [{
+        'id': comment.id,
+        'text': comment.text,
+        'comment_user': comment.comment_user.username,
+        'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'authentication_id': index
+    } for comment in comments]
+    
+    return JsonResponse({'comments': comments_data})
+
+@login_required
+def authenticate_challenge(request, challenge_id, user_id, index):
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    authentication = get_object_or_404(Authentication, challenge_id=challenge_id, user_id=user_id, index=index)
+    context = {
+        'challenge': challenge,
+        'authentication': authentication,
+        'user': request.user,
+        'index': index,
+    }
+    return render(request, 'habit_stacker/authenticate_user_page.html', context)
+
+@login_required
+def add_comment(request, challenge_id, user_id, index):
+    if request.method == 'POST':
+        authentication = get_object_or_404(Authentication, challenge_id=challenge_id, user_id=user_id, index=index)
+        comment_text = request.POST.get('comment')
+        if comment_text:
+            comment = Comment.objects.create(
+                challenge_id=challenge_id,
+                user_id=user_id,
+                authentication_id=index,
+                comment_user=request.user,
+                text=comment_text
+            )
+            return JsonResponse({
+                'status': 'success',
+                'comment_id': comment.id,
+                'comment_text': comment.text,
+                'comment_user': comment.comment_user.username,
+                'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'authentication_id': index
+            })
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def edit_challenge(request, challenge_id):
+    authentication = get_object_or_404(Authentication, challenge_id=challenge_id, user=request.user)
+    if request.method == 'POST':
+        form = AuthenticationForm(request.POST, request.FILES, instance=authentication)
+        if form.is_valid():
+            updated_authentication = form.save(commit=False)
+            if 'new_image' in request.FILES:
+                updated_authentication.file = request.FILES['new_image']
+            updated_authentication.save()
+            messages.success(request, '챌린지 인증이 성공적으로 수정되었습니다.')
+            return redirect('joined_challenge', pk=challenge_id)
+        else:
+            messages.error(request, '폼 데이터가 유효하지 않습니다. 다시 확인해주세요.')
+    else:
+        form = AuthenticationForm(instance=authentication)
+    
+    return render(request, 'habit_stacker/edit_challenge_authenticate.html', {
+        'form': form, 
+        'authentication': authentication,
+        'challenge_id': challenge_id
+    })
 
 # @login_required
 # def authenticate_challenge(request, challenge_id):
@@ -305,7 +392,7 @@ def challenge_authentications(request, challenge_id):
 
 def create_challenge(request):
     if request.method == 'POST':
-        form = ChallengeForm(request.POST)
+        form = ChallengeForm(request.POST, request.FILES)
         if form.is_valid():
             challenge = form.save(commit=False)
             challenge.created_at = timezone.now()
@@ -347,9 +434,13 @@ def join_challenge(request, challenge_id):
 def joined_challenge_page(request, pk):
     challenge = get_object_or_404(Challenge, pk=pk)
     is_participant = ChallengeParticipant.objects.filter(user=request.user, challenge=challenge).exists()
+    challenge_index = Authentication.objects.filter(challenge=challenge, user=request.user).count()
+    authentication = Authentication.objects.filter(challenge=challenge)
     context = {
         'challenge': challenge,
         'is_participant': is_participant,
+        'challenge_index': challenge_index,
+        'authentication': authentication,
     }
     return render(request, 'habit_stacker/joined_challenge.html', context)
 
@@ -357,6 +448,28 @@ def joined_challenge_page(request, pk):
 def main_page(request):
     challenge_list = ChallengeList.as_view()
     return challenge_list(request)
+
+
+def pagination(request):
+    challenges = Challenge.objects.all().order_by('-created_at')  # 생성일 기준 내림차순 정렬
+    
+    # 페이지당 아이템 수 설정
+    items_per_page = 12
+    
+    # 페이지네이터 객체 생성
+    paginator = Paginator(challenges, items_per_page)
+    
+    # 현재 페이지 번호 가져오기 (기본값 1)
+    page_number = request.GET.get('page', 1)
+    
+    # 해당 페이지의 아이템들 가져오기
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'habit_stacker/challenge_list.html', {
+        'page_obj': page_obj
+    })
+
+
 
 # CBV로 페이지 만들기
 class ChallengeList(ListView):
@@ -368,10 +481,24 @@ class ChallengeList(ListView):
 # CBV로 챌린지 생성하기
 class ChallengeCreate(LoginRequiredMixin, CreateView):
     model = Challenge
-    fields = ['title', 'description', 'duration', 'category']
+    fields = ['title', 'description', 'duration', 'category', 'image', 'note']
+    template_name = 'habit_stacker/challenge_form.html'
+    success_url = reverse_lazy('main_page')
 
-    # 객체 생성 후 리디렉트할 URL 정의
-    success_url = reverse_lazy('challenge_list') # 'challenge_list'는 리디렉션될 페이지의 URL 이름
+    def form_valid(self, form):
+        if 'image' in self.request.FILES:
+            image_file = self.request.FILES['image']
+            file_name = default_storage.get_available_name(os.path.join('challenge_images', image_file.name))
+            file_content = ContentFile(image_file.read())
+            file_path = default_storage.save(file_name, file_content)
+            form.instance.image = file_path
+        form.instance.creator = self.request.user  # 챌린지 생성자 설정
+        return super().form_valid(form)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['image'].required = False  # 이미지 필드를 선택적으로 만듦
+        return form
 
 ##회원 관리 코드
 @csrf_protect
@@ -414,6 +541,40 @@ def logout(request):
     auth_logout(request)
     messages.success(request, '로그아웃되었습니다.')
     return redirect('main_page')
+
+
+
+# 검색 기능
+class ChallengeSearch(ChallengeList):
+    paginate_by = 12
+
+    def get_queryset(self):
+        q = self.kwargs.get('q')
+        challenge_list = Challenge.objects.filter(Q(title__contains=q))
+        return challenge_list
+    
+    def get_context_data(self, **kwargs):
+        context = super(ChallengeSearch, self).get_context_data(**kwargs)
+        q = self.kwargs.get('q')
+        context['search_info'] = f'검색: {q} ({self.get_queryset().count()})'
+        context['base_url'] = reverse_lazy('main_page')  # main_page의 URL을 base_url로 추가
+        return context
+
+
+# # 상세 댓글
+# def comment_detail(request, pk):
+#     comment_details = get_object_or_404(Comment, pk=pk)
+#     comments = Comment.objects.filter(challenge = pk)
+#     if request.method == "POST":
+#         comment = Comment()
+#         comment.challenge = comment_details
+#         comment.body = request.POST.get('body')
+#         comment.save()
+#         return redirect('single_challenge_page', comment_details.challenge.pk)
+#     else:
+#         return render(request, 'habit_stacker/comment_detail.html', {'challenge': comment_details,'comment_details': comment_details})
+
+
 
 # ChallengeParticipant 모델을 사용하여 특정 회원이 챌린지에 참여하고 있는지 여부를 확인하고, 필요에 따라 인증 상태를 업데이트 할 수 있다.
 

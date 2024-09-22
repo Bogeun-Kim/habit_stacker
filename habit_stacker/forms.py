@@ -1,5 +1,5 @@
 from django import forms
-from .models import User, Challenge
+from .models import User, Challenge, Comment, Authentication
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import get_user_model, authenticate
 from django.core.exceptions import ValidationError
@@ -103,3 +103,38 @@ class ChallengeForm(forms.ModelForm):
             'rows': 4,
             'placeholder': '챌린지 노트'
         })      
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['text', 'comment_user', 'authentication']
+        widgets = {
+            'text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'comment_user': forms.HiddenInput(),
+            'authentication': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['text'].widget.attrs.update({
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': '댓글 작성'
+        })
+
+class AuthenticationForm(forms.ModelForm):
+    class Meta:
+        model = Authentication
+        fields = ['text', 'file']
+        widgets = {
+            'text': forms.TextInput(attrs={'class': 'form-control'}),
+            'file': forms.FileInput(attrs={'class': 'form-control-file'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['text'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '인증 텍스트'
+        })
+        

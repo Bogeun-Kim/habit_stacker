@@ -50,7 +50,11 @@
                 <article class="image-container-article">
                     <!-- Preview image figure-->
                     <figure class="mb-4 img-container">
-                        <img class="img-fluid rounded" src="https://dummyimage.com/700x467/ced4da/6c757d.jpg" alt="..." />
+                        {% if challenge.image %}
+                            <img class="img-fluid rounded" src="{{ challenge.image.url }}" alt="..." />
+                        {% else %}
+                            <img class="img-fluid rounded" src="https://dummyimage.com/700x467/ced4da/6c757d.jpg" alt="..." />
+                        {% endif %}
                     </figure>
                 </article>
             </div>
@@ -62,12 +66,6 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">챌린지 소개</button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="auth1-tab" data-bs-toggle="tab" data-bs-target="#auth1" type="button" role="tab" aria-controls="auth1" aria-selected="false">나의 인증 현황</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="auth2-tab" data-bs-toggle="tab" data-bs-target="#auth2" type="button" role="tab" aria-controls="auth2" aria-selected="false">참가자들의 인증 현황</button>
-                            </li>
                         </ul>
                         <!-- Post content-->
                     <section class="mb-5">
@@ -77,7 +75,12 @@
                                 <p class="card-text">기본정보 : {{ challenge.description }}</p>
                                 <p class="card-text">카테고리 : {{ challenge.category }}</p>
                                 <p class="card-text">start date : {{ challenge.created_at|date:"Y-m-d" }}</p>
-                                <p class="card-text">인증샷 예시 : {{ challenge.image }}</p>
+                                <p class="card-text">인증샷 예시 : </p>
+                                {% if challenge.image %}
+                                    <img class="img-fluid rounded" src="{{ challenge.image.url }}" alt="..." />
+                                {% else %}
+                                    <img class="img-fluid rounded" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
+                                {% endif %}
                                 <p class="card-text">챌린지 진행 시 꼭 확인해주세요! : {{ challenge.note }}</p>
                             </div>
 
@@ -98,9 +101,26 @@
                     </div>
                 </div>
             </div>
+        <!-- 새로운 드롭다운 메뉴 추가 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span id="currentSelection">다른 사람들의 인증 현황</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#" data-value="others">다른 사람들의 인증 현황</a>
+                        <a class="dropdown-item" href="#" data-value="mine">나의 인증 현황</a>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div> 
 
+        <!-- 인증 이미지를 표시할 컨테이너 -->
+        <div id="authenticationImagesContainer" class="row mt-3">
+            <!-- 인증 이미지들이 여기에 동적으로 추가됩니다 -->
+        </div>
+    </div>
     <script>
         document.getElementById('join-btn')?.addEventListener('click', function() {
             var challengeId = this.getAttribute('data-challenge-id');
@@ -124,72 +144,48 @@
             window.location.href = "{% url 'login' %}";
         }); 
 
-        function loadAuthenticationImages() {
-            var challengeId = '{{ challenge.id }}';  // Django 템플릿 변수 사용
-            fetch(`/api/challenge/${challengeId}/authentications/`)
-        .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('authentication-images');
-                    container.innerHTML = ''; // 기존 내용을 지웁니다.
-                    
-                    if (data.authentications && Array.isArray(data.authentications)) {
-                        data.authentications.forEach(auth => {
-                            if (auth.file_url) {
-                                const imgElement = document.createElement('div');
-                                imgElement.className = 'col-md-4 mb-3';
-                                imgElement.innerHTML = `
-                                    <div class="card">
-                                        <img src="${auth.file_url}" class="card-img-top" alt="인증 이미지">
-                                    <div class="card-body">
-                                        <p class="card-text">${auth.user}: ${auth.text}</p>
-                                        <p class="card-text"><small class="text-muted">${new Date(auth.created_at).toLocaleString()}</small></p>
-                                        </div>
-                                    </div>
-                                `;
-                                container.appendChild(imgElement);
-                            }
-                        });
-                    } else {
-                        console.error('Unexpected data structure:', data);
-                        container.innerHTML = '<p>인증 내용을 불러오는 데 실패했습니다.</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    const container = document.getElementById('authentication-images');
-                    container.innerHTML = '<p>인증 내용을 불러오는 중 오류가 발생했습니다.</p>';
-                });
-            }
-
-        // 페이지 로드 시 인증 이미지를 불러옵니다
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAuthenticationImages();
+        // 드롭다운 메뉴 아이템 클릭 이벤트 처리
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const selectedValue = this.getAttribute('data-value');
+                const buttonText = this.textContent;
+                document.getElementById('currentSelection').textContent = buttonText;
+                loadAuthenticationImages(selectedValue);
+            });
         });
 
-        // 주기적으로 인증 이미지를 업데이트합니다
-        setInterval(loadAuthenticationImages, 60000); // 1분마다 업데이트
+        // 페이지 로드 시 다른 사람들의 인증 이미지를 불러옵니다
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAuthenticationImages('others');
+        });
 
-        function loadMyAuthenticationImages() {
+        function loadAuthenticationImages(type) {
             var challengeId = '{{ challenge.id }}';  // Django 템플릿 변수 사용
-            fetch(`/api/challenge/${challengeId}/my-authentications/`)
+
+            var url = type === 'mine' ? `/api/challenge/${challengeId}/my-authentications/` : `/api/challenge/${challengeId}/authentications/`;
+
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    const container = document.getElementById('my-authentication-images');
+                    const container = document.getElementById('authenticationImagesContainer');
                     container.innerHTML = ''; // 기존 내용을 지웁니다.
                     
                     if (data.authentications && Array.isArray(data.authentications)) {
                         if (data.authentications.length === 0) {
-                            container.innerHTML = '<p>아직 인증한 이미지가 없습니다.</p>';
+                            container.innerHTML = '<p>인증된 이미지가 없습니다.</p>';
                         } else {
-                            data.authentications.forEach(auth => {
-                                if (auth.file_url) {
+                            data.authentications.forEach((auth, index) => {
+                                if (auth.file_url && auth.index !== undefined) {
                                     const imgElement = document.createElement('div');
                                     imgElement.className = 'col-md-4 mb-3';
+                                    file_url = auth.file_url;
+                                    redirect_url = '{% url "authenticate_challenge" challenge_id=challenge.id user_id=0 index=0 %}'.replace('0', auth.user_id).replace('0', auth.index);
                                     imgElement.innerHTML = `
                                         <div class="card">
-                                            <img src="${auth.file_url}" class="card-img-top" alt="인증 이미지">
+                                            <img src="${file_url}" class="card-img-top" alt="인증 이미지" onclick="window.location.href='${redirect_url}'">
                                             <div class="card-body">
-                                                <p class="card-text">${auth.text}</p>
+                                                <p class="card-text">${type === 'mine' ? '' : auth.user + ': '}${auth.text}</p>
                                                 <p class="card-text"><small class="text-muted">${new Date(auth.created_at).toLocaleString()}</small></p>
                                             </div>
                                         </div>
@@ -197,6 +193,10 @@
                                     container.appendChild(imgElement);
                                 }
                             });
+                            
+                            if (container.children.length === 0) {
+                                container.innerHTML = '<p>인증된 이미지가 없습니다.</p>';
+                            }
                         }
                     } else {
                         console.error('Unexpected data structure:', data);
@@ -205,18 +205,14 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    const container = document.getElementById('my-authentication-images');
+                    const container = document.getElementById('authenticationImagesContainer');
                     container.innerHTML = '<p>인증 내용을 불러오는 중 오류가 발생했습니다.</p>';
                 });
         }
-
-        // 페이지 로드 시 내 인증 이미지를 불러옵니다
+        // 페이지 로드 시 다른 사람들의 인증 이미지를 불러옵니다
         document.addEventListener('DOMContentLoaded', function() {
-            loadMyAuthenticationImages();
+            loadAuthenticationImages('others');
         });
-
-        // Authentication 탭이 클릭될 때 내 인증 이미지를 불러옵니다
-        document.querySelector('button[data-bs-target="#auth1"]').addEventListener('click', loadMyAuthenticationImages);
     </script>
 
 {% endblock %}

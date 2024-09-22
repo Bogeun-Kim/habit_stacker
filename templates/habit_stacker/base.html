@@ -4,33 +4,80 @@
     <meta charset="UTF-8">
     <title>Main</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        .btn-outline-custom {
+            color: #212224;
+            border-color: #212224;
+        }
+
+        .btn-outline-custom:hover {
+            color: #ffffff;
+            background-color: #212224;
+            border-color: #212224;
+        }
+
+        .btn-outline-custom:hover .profile {
+            filter: invert(1) brightness(200%);
+        }
+
+        .navbar {
+            min-height: 80px;
+        }
+
+        .navbar .container-fluid {
+            padding: 0 15px;
+        }
+
+        #search-container {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        @media (max-width: 991px) {
+            .navbar .container-fluid > div {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #search-container {
+                position: static;
+                transform: none;
+                margin: 10px 0;
+            }
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     <!-- Navigation-->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container px-4 px-lg-5">
-            <a class="navbar-brand" href="{% url 'main_page' %}">
-                {% load static %}
-                <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
-            <div class="collapse navbar-collapse justify-content-between" id="navbarSupportedContent">
-                <ul class="navbar-nav mb-2 mb-lg-0">
-                    <!-- 여기에 추가 메뉴 항목을 넣을 수 있습니다 -->
-                </ul>
-                
-                <!-- 검색창 (중앙 정렬) -->
-                <form class="d-flex mx-auto">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" style="width: 300px;">
-                    <button class="btn btn-outline-dark" type="submit">Search</button>
-                </form>
-                
-                <div class="d-flex align-items-center">
-                    <!-- 로그인/로그아웃 버튼 -->
+    <nav class="navbar navbar-expand-lg navbar-light mb-5" style="background-color: #e4e5ed;">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <!-- 로고 -->
+                <a class="navbar-brand" href="{% url 'main_page' %}">
+                    {% load static %}
+                    <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;">
+                </a>
+
+            <!-- 토글 버튼 -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- 네비게이션 내용 -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <!-- 검색창 -->
+                <div id="search-container" class="d-flex">
+                    <input id="search-input" class="form-control me-2" type="search" placeholder="Search" aria-label="Search" style="width: 300px;">
+                    <button class="btn btn-outline-custom" type="submit" onclick="searchChallenge()">Search</button>
+                </div>
+
+                <!-- 로그인/로그아웃 버튼 -->
+                <div class="ms-auto">
                     {% if user.is_authenticated %}
                     <div class="dropdown">
-                        <button class="btn btn-outline-dark dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-custom dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <img class="profile" src="{% static 'profile.svg' %}" alt="Profile" style="width: 20px; height: auto;">
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
@@ -40,16 +87,8 @@
                         </ul>
                     </div>
                     {% else %}
-                    <form class="d-flex me-2" action="{% url 'login' %}" method="GET">
-                        <button class="btn btn-outline-dark" type="submit">
-                            Log In
-                        </button>
-                    </form>
-                    <form class="d-flex" action="{% url 'signup' %}" method="GET">
-                        <button class="btn btn-outline-dark" type="submit">
-                            Sign Up
-                        </button>
-                    </form>
+                    <a href="{% url 'login' %}" class="btn btn-outline-custom me-2">Log In</a>
+                    <a href="{% url 'signup' %}" class="btn btn-outline-custom">Sign Up</a>
                     {% endif %}
                 </div>
             </div>
@@ -60,13 +99,13 @@
     {% endblock %}
 
     <!-- Footer-->
-    <footer class="py-5 bg-dark">
-        <div class="container"><p class="m-0 text-center text-white">Copyright &copy; Habit Stacker 2024</p></div>
+    <footer class="py-5" style="background-color: #e4e5ed">
+        <div class="container"><p class="m-0 text-center" style="color: black">Copyright &copy; Habit Stacker 2024</p></div>
     </footer>
 
     <!-- 챗봇 버튼 -->
-    <div id="chatbot-button" class="position-fixed bottom-0 end-0 m-3">
-        <button class="btn btn-primary rounded-circle" style="width: 60px; height: 60px;" onclick="toggleChatbot()">
+    <div id="chatbot-button" class="position-fixed bottom-0 end-0 mb-5 me-5">
+        <button class="rounded-circle" style="width: 60px; height: 60px; background-color: #e4e5ed; border: 2px slid #212224;" onclick="toggleChatbot()">
             <i class="bi bi-chat-dots-fill"></i>
         </button>
     </div>
@@ -435,6 +474,26 @@
         }
     }
 )
+</script>
+<script>
+    const baseUrl = "{% url 'main_page' %}";
+
+    function searchChallenge() {
+        let searchValue = document.getElementById('search-input').value.trim();
+        if (searchValue.length > 1) {
+            window.location.href = baseUrl + "search/" + encodeURIComponent(searchValue) + "/";
+        }
+        else {
+            alert('검색어('+ searchValue +')가 너무 짧습니다.')
+        }
+    };
+
+    document.getElementById('search-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            searchChallenge();
+        }
+    });
+
 </script>
 
     {% block extra_scripts %}{% endblock %}

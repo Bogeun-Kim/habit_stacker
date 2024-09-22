@@ -77,7 +77,7 @@ class User(models.Model):
 
 class ChallengeAuthentication(models.Model):
     participant = models.ForeignKey(ChallengeParticipant, on_delete=models.CASCADE)
-    text = models.TextField()
+    text = models.TextField(null=True, blank=True)
     file = models.FileField(upload_to='challenge_authentications/', null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -96,11 +96,37 @@ class ChatMessage(models.Model):
         return f"{self.user.username if self.user else 'AI'}: {self.message[:50]}"
 
 class Authentication(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
-    text = models.TextField(blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name='authentications')
+    text = models.TextField(null=True, blank=True)
     file = models.FileField(upload_to='authentications/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    index = models.IntegerField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.index is None:
+            last_index = Authentication.objects.filter(
+                challenge=self.challenge,
+                user=self.user
+            ).aggregate(models.Max('index'))['index__max']
+            self.index = (last_index or 0) + 1
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username}'s authentication for {self.challenge.title}"
+    
+    # 댓글
+class Comment(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
+    comment_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='authored_comments', null=True, blank=True)
+    authentication = models.ForeignKey(Authentication, on_delete=models.CASCADE, default=0, related_name='comments')
+    text = models.TextField(default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.comment_user.username} on {self.user.username}'s authentication {self.authentication.index}"
+
+    @property
+    def authentication_index(self):
+        return self.authentication.index

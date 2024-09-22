@@ -11,9 +11,9 @@
         </div>
     </header>
     <!-- Section-->
-    <section class="py-5">
+    <section class="py-5" id="challenge-section">
         <div class="container px-4 px-lg-5 mt-5">
-            <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+            <div id="challenge-container" class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
                 
                 {% for challenge in challenge_list %}
                 <div class="col mb-5"> 
@@ -23,7 +23,11 @@
                             <!-- Sale badge-->
                             <div class="badge bg-dark text-white position-absolute" style="top: 0.5rem; left: 0.5rem">{{ challenge.duration }}</div>
                             <!-- Product image-->
-                            <img class="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
+                            {% if challenge.image %}
+                                <img class="card-img-top" src="{{ challenge.image.url }}" alt="..." />
+                            {% else %}
+                                <img class="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
+                            {% endif %}
                             <!-- Product details-->
                             <div class="card-body p-4">
                                 <div class="text-left">
@@ -43,15 +47,66 @@
         </div>
         
         <!-- Pagination -->
-        <ul class="pagination justify-content-center my-4">
-            <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a></li>
-            <li class="page-item active" aria-current="page"><a class="page-link" href="#!">1</a></li>
-            <li class="page-item"><a class="page-link" href="#!">2</a></li>
-            <li class="page-item"><a class="page-link" href="#!">3</a></li>
-            <li class="page-item disabled"><a class="page-link" href="#!">...</a></li>
-            <li class="page-item"><a class="page-link" href="#!">6</a></li>
-            <li class="page-item"><a class="page-link" href="#!">Next</a></li>
+        <ul class="pagination justify-content-center">
+            <!-- 이전페이지 -->
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+            <!-- 없으면 비활성화된 상태로 표시 -->
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo; Previous</span>
+                </li>
+            {% endif %}
+            
+            <!-- 페이지 번호 링크 -->
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                <!-- 현재 페이지 번호의 앞뒤로 2페이지씩만 표시 -->
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            <!-- 다음페이지 링크 -->
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+            <!-- 없으면 비활성화된 상태로 표시 -->
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next &raquo;</span>
+                </li>
+            {% endif %}
         </ul>
     </section>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        function loadPage(page) {
+            $.ajax({
+                url: 'habit_stacker/challenge_list/?page=' + page, // 페이지 번호를 포함한 URL.createObjectURL
+                type: 'GET',
+                success: function (data) {
+                    $('#challenge-container').html($(data).find('#challenge-container').html());
+                    $('#pagination').html($(data).find('#pagination').html());
+                },
+                error: function (xhr) {
+                    console.error('Error loading page: ', xhr);
+                }
+            });
+        }
+    </script>
+
+
 
 {% endblock %}

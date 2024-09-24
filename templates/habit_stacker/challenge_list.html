@@ -1,19 +1,36 @@
 {% extends 'habit_stacker/base.html' %}
 {% block main_area %}
 
-    <!-- Header-->
-    <header class="bg-dark py-5">
-        <div class="container px-4 px-lg-5 my-5">
-            <div class="text-center text-white">
-                <h1 class="display-4 fw-bolder">Habit Stacker</h1>
-                <p class="lead fw-normal text-white-50 mb-0">Content Text</p>
+    <!-- 인기 챌린지 슬라이더 -->
+    <div class="container px-4 px-lg-5 mt-5">
+        <h2 class="mb-4">인기 챌린지</h2>
+        <div class="popular-challenges-slider-container">
+            <button class="slider-button prev-button">&lt;</button>
+            <div class="popular-challenges-slider">
+                {% for challenge in popular_challenges %}
+                <div class="slider-item">
+                    <div class="card">
+                        <div class="card-img-container">
+                           <img class="card-img-top" src="{{ challenge.image.url|default:'https://dummyimage.com/450x300/dee2e6/6c757d.jpg' }}" 
+                                alt="{{ challenge.title }}" 
+                                data-challenge-id="{{ challenge.id }}">
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ challenge.title }}</h5>
+                            <p class="card-text">참여자 수: {{ challenge.participants_count }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
+            <button class="slider-button next-button">&gt;</button>
         </div>
-    </header>
-    <!-- Section-->
+    </div>
+
+    <!-- 기존 챌린지 목록 -->
     <section class="py-5" id="challenge-section">
         <div class="container px-4 px-lg-5 mt-5">
-            <div id="challenge-container" class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+            <div id="challenge-container" class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center"">
                 
                 {% for challenge in challenge_list %}
                 <div class="col mb-5"> 
@@ -88,11 +105,73 @@
         </ul>
     </section>
 
+{% endblock %}
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
-    <script>
-        function loadPage(page) {
+{% block extra_scripts %}
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Slick Slider CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+
+<!-- Slick Slider JS -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+<script>
+    $(document).ready(function(){
+        initPopularChallengesSlider();
+        initChallengeImageClickHandler();
+    });
+
+    function initPopularChallengesSlider() {
+        var $slider = $('.popular-challenges-slider');
+        
+        $slider.slick({
+            slidesToShow: 4,
+            slidesToScroll: 1,
+            autoplay: true,
+            autoplaySpeed: 3000,
+            arrows: false,
+            dots: true,
+            infinite: true,
+            speed: 300,
+            cssEase: 'linear',
+            responsive: [
+                {
+                    breakpoint: 1024,
+                    settings: {
+                        slidesToShow: 2,
+                    }
+                },
+                {
+                    breakpoint: 768,
+                    settings: {
+                        slidesToShow: 1,
+                    }
+                }
+            ]
+        });
+
+        $('.prev-button').click(function(){
+            $slider.slick('slickPrev');
+        });
+
+        $('.next-button').click(function(){
+            $slider.slick('slickNext');
+        });
+    }
+
+    function initChallengeImageClickHandler() {
+        $('.card-img-top').click(function() {
+            var challengeId = $(this).data('challenge-id');
+            if (challengeId) {
+                window.location.href = '/single_challenge_page/' + challengeId + '/';
+            }
+        });
+    }
+
+    function loadPage(page) {
             $.ajax({
                 url: 'habit_stacker/challenge_list/?page=' + page, // 페이지 번호를 포함한 URL.createObjectURL
                 type: 'GET',
@@ -105,8 +184,77 @@
                 }
             });
         }
-    </script>
+</script>
 
-
-
+<style>
+    .popular-challenges-slider-container {
+        position: relative;
+        padding: 0 40px;
+        max-width: 100%;  /* 슬라이더의 최대 너비 설정 */
+        margin: 0 auto;  /* 중앙 정렬 */
+    }
+    .popular-challenges-slider {
+        width: 100%;
+        margin: 0 auto;
+    }
+    .popular-challenges-slider .slider-item {
+        padding: 0 10px;
+    }
+    .popular-challenges-slider .card {
+        height: 100%;
+        margin: 0 auto;  /* 중앙 정렬 */
+    }
+    .popular-challenges-slider .card-img-container {
+        position: relative;
+        width: 100%;
+        padding-top: 75%; /* 4:3 비율 유지 */
+        overflow: hidden;
+    }
+    .popular-challenges-slider .card-img-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;  /* 이미지 비율 유지하면서 컨테이너에 맞춤 */
+        cursor: pointer; /* 마우스 오버 시 커서 변경 */
+    }
+    .popular-challenges-slider .card-body {
+        padding: 10px;  /* 카드 본문의 패딩 줄임 */
+    }
+    .popular-challenges-slider .card-title {
+        font-size: 1rem;  /* 제목 글자 크기 줄임 */
+        margin-bottom: 5px;
+    }
+    .popular-challenges-slider .card-text {
+        font-size: 0.8rem;  /* 본문 글자 크기 줄임 */
+    }
+    .popular-challenges-slider .slick-dots {
+        bottom: -30px;
+    }
+    .slick-track {
+        display: flex !important;
+    }
+    .slick-slide {
+        height: inherit !important;
+    }
+    .slider-button {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0,0,0,0.5);
+        color: white;
+        border: none;
+        padding: 5px 10px;  /* 버튼 크기 줄임 */
+        font-size: 16px;  /* 버튼 글자 크기 줄임 */
+        cursor: pointer;
+        z-index: 1;
+    }
+    .prev-button {
+        left: 0;
+    }
+    .next-button {
+        right: 0;
+    }
+</style>
 {% endblock %}

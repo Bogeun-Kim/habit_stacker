@@ -29,6 +29,7 @@ class Challenge(models.Model):
     description = models.TextField()
     duration = models.CharField(max_length=20, choices=DURATION_CHOICES, default='For 1 week')
     image = models.ImageField(upload_to='challenge_images/', null=True, blank=True)
+    authentication_image = models.ImageField(upload_to='challenge_images/', null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)

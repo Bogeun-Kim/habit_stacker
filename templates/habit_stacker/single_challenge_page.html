@@ -31,6 +31,17 @@
     .nav-item {
         margin-bottom: 15px;
     }
+
+    footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;    
+    }
+
+    #main-container {
+        padding: 10px 0 160px 0; /* top, right, bottom, left */
+    }
     
     @media (max-width: 991px) {
         .col-lg-4-wider, .col-lg-8-narrower {
@@ -43,7 +54,7 @@
     }
 </style>
     <!-- Page content-->
-    <div class="container px-4 px-lg-5 mt-5" style="padding-left: 0px; padding-right: 0px;">
+    <div id="main-container" class="container px-4 px-lg-5 mt-5">
         <div class="row">
             <div class="col-lg-4-wider">
                 <!-- Post content-->
@@ -76,21 +87,22 @@
                                 <p class="card-text">카테고리 : {{ challenge.category }}</p>
                                 <p class="card-text">start date : {{ challenge.created_at|date:"Y-m-d" }}</p>
                                 <p class="card-text">인증샷 예시 : </p>
-                                {% if challenge.image %}
-                                    <img class="img-fluid rounded" src="{{ challenge.image.url }}" alt="..." />
+                                {% if challenge.authentication_image %}
+                                    <img class="img-fluid rounded" src="{{ challenge.authentication_image.url }}" style="width: auto; height: 200px;" alt="..."/>
                                 {% else %}
-                                    <img class="img-fluid rounded" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
+                                    <img class="img-fluid rounded" src="https://dummyimage.com/300x200/dee2e6/6c757d.jpg" alt="..." />
                                 {% endif %}
                                 <p class="card-text">챌린지 진행 시 꼭 확인해주세요! : {{ challenge.note }}</p>
-                                <button id="join-btn" data-challenge-id="{{ challenge.id }}" class="btn btn-primary">챌린지 참가</button>
+                                <button type="button" class="btn btn-primary" id="join-btn" data-challenge-id="{{ challenge.id }}">챌린지 참가</button>
                             </div>
 
+                            {% comment %}
                             <div class="tab-pane fade" id="auth2" role="tabpanel" aria-labelledby="auth2-tab">
                                 <h5 class="card-title fw-bolder">Authentication Tab</h5>
                                 <div id="authentication-images" class="row">
                                     <!-- 인증 사진들이 여기에 동적으로 추가됩니다 -->
                                 </div>
-                            </div>
+                            </div> {% endcomment %}
                         </div>
                     </section>
                     </div>
@@ -104,8 +116,8 @@
                         <span id="currentSelection">다른 사람들의 인증 현황</span>
                     </button>
                     <div class="dropdown-menu">
-                        <a class="dropdown-item" href="#" data-value="others">다른 사람들의 인증 현황</a>
-                        <a class="dropdown-item" href="#" data-value="mine">나의 인증 현황</a>
+                        <a class="dropdown-item" id="dropdown-item-authentication" href="#" data-value="others">다른 사람들의 인증 현황</a>
+                        <a class="dropdown-item" id="dropdown-item-authentication" href="#" data-value="mine">나의 인증 현황</a>
                     </div>
                 </div>
             </div>
@@ -140,7 +152,7 @@
         }); 
 
         // 드롭다운 메뉴 아이템 클릭 이벤트 처리
-        document.querySelectorAll('.dropdown-item').forEach(item => {
+        document.querySelectorAll('[id^="dropdown-item-authentication"]').forEach(item => {
             item.addEventListener('click', function(e) {
                 e.preventDefault();
                 const selectedValue = this.getAttribute('data-value');
@@ -173,14 +185,15 @@
                             data.authentications.forEach((auth, index) => {
                                 if (auth.file_url && auth.index !== undefined) {
                                     const imgElement = document.createElement('div');
-                                    imgElement.className = 'col-md-4 mb-3';
+                                    /* 한 행에 보여지는 이미지의 개수를 정함 */
+                                    imgElement.className = 'col-md-3 mb-3';
                                     file_url = auth.file_url;
                                     redirect_url = '{% url "authenticate_challenge" challenge_id=challenge.id user_id=0 index=0 %}'.replace('0', auth.user_id).replace('0', auth.index);
                                     imgElement.innerHTML = `
                                         <div class="card">
-                                            <img src="${file_url}" class="card-img-top" alt="인증 이미지" onclick="window.location.href='${redirect_url}'">
+                                            <img src="${file_url}" class="card-img-top" alt="인증 이미지" onclick="window.location.href='${redirect_url}'" style="width: auto%; height: 200px;">
                                             <div class="card-body">
-                                                <p class="card-text">${type === 'mine' ? '' : auth.user + ': '}${auth.text}</p>
+                                                <p class="card-text">${ auth.user + ': ' + auth.text}</p>
                                                 <p class="card-text"><small class="text-muted">${new Date(auth.created_at).toLocaleString()}</small></p>
                                             </div>
                                         </div>

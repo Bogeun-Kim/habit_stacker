@@ -60,13 +60,14 @@ class LoginForm(forms.Form):
 class ChallengeForm(forms.ModelForm):
     class Meta:
         model = Challenge
-        fields = ['title', 'description', 'duration', 'category', 'image', 'note']
+        fields = ['title', 'description', 'duration', 'category', 'image', 'authentication_image', 'note']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'duration': forms.Select(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control-file'}),
+            'authentication_image': forms.FileInput(attrs={'class': 'form-control-file'}),
             'note': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 

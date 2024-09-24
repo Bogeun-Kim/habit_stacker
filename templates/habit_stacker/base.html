@@ -52,7 +52,7 @@
 <body>
     <!-- Navigation-->
     <nav class="navbar navbar-expand-lg navbar-light mb-5" style="background-color: #e4e5ed;">
-        <div class="container-fluid">
+        <div class="container">
             <div class="d-flex justify-content-between align-items-center w-100">
                 <!-- 로고 -->
                 <a class="navbar-brand" href="{% url 'main_page' %}">
@@ -87,8 +87,8 @@
                         </ul>
                     </div>
                     {% else %}
-                    <a href="{% url 'login' %}" class="btn btn-outline-custom me-2">Log In</a>
-                    <a href="{% url 'signup' %}" class="btn btn-outline-custom">Sign Up</a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-custom me-2">Log In</a>
+                        <a href="{% url 'signup' %}" class="btn btn-outline-custom">Sign Up</a>
                     {% endif %}
                 </div>
             </div>
@@ -99,7 +99,7 @@
     {% endblock %}
 
     <!-- Footer-->
-    <footer class="py-5" style="background-color: #e4e5ed">
+    <footer class="py-5" style="background-color: #e4e5ed;">
         <div class="container"><p class="m-0 text-center" style="color: black">Copyright &copy; Habit Stacker 2024</p></div>
     </footer>
 
@@ -234,13 +234,41 @@
         
         const username = message.is_ai ? 'AI' : userName;
         
-        messageElement.innerHTML = `<strong>${username}:</strong> ${message.message}`;
+        messageElement.innerHTML = `<strong>${username}:</strong></br>${message.message}`;
         if (!message.is_ai && message.image_url) {
-            messageElement.innerHTML += `<br><img src="${message.image_url}" alt="인증 이미지" style="max-width: 200px;">`;
+            // 이미지와 타임스탬프를 감싸는 컨테이너 추가
+            messageElement.innerHTML += `
+                <div class="image-timestamp-container">
+                    <img src="${message.image_url}" alt="인증 이미지" style="max-width: 150px;">
+                    <span class="timestamp"></span>
+                </div>`;
+            
+            // 타임스탬프 형식 변경 및 추가
+            const date = new Date(message.timestamp);
+            const formattedTimestamp = `${date.getFullYear()}:${String(date.getMonth() + 1).padStart(2, '0')}:${String(date.getDate()).padStart(2, '0')}-${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            messageElement.querySelector('.timestamp').textContent = formattedTimestamp;
         }
-        
+    
         return messageElement;
     }
+
+    // CSS 스타일 추가
+    const style = document.createElement('style');
+        style.textContent = `
+            .image-timestamp-container {
+                position: relative;
+                display: inline-block;
+            }
+            .timestamp {
+                position: absolute;
+                right: 5px;
+                bottom: 5px;
+                background-color: rgba(255, 255, 255, 0.7);
+                padding: 2px 5px;
+                border-radius: 3px;
+                font-size: 0.8em;
+            }
+        `;
 
     function backToChallengeList() {
         selectedChallengeId = null;
@@ -429,20 +457,6 @@
             }
         }
 
-        function createMessageElement(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = `message ${message.is_ai ? 'ai-message' : 'user-message'}`;
-            
-            const username = message.is_ai ? 'AI' : message.user;
-            
-            messageElement.innerHTML = `<strong>${username}:</strong> ${message.message}`;
-            if (!message.is_ai && message.image_url) {
-                messageElement.innerHTML += `<br><img src="${message.image_url}" alt="인증 이미지" style="max-width: 200px;">`;
-            }
-            
-            return messageElement;
-        }
-
         const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) {
             chatMessages.addEventListener('scroll', function(e) {
@@ -493,6 +507,7 @@
             searchChallenge();
         }
     });
+document.head.appendChild(style);
 
 </script>
 

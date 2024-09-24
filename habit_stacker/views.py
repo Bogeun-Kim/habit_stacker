@@ -27,6 +27,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db.models import Count
 from datetime import timedelta
 import json
 from asgiref.sync import sync_to_async
@@ -259,12 +260,15 @@ def get_authentications(request, challenge_id):
 def my_challenge_authentications(request, challenge_id):
     try:
         challenge = Challenge.objects.get(id=challenge_id)
-        authentications = Authentication.objects.filter(challenge=challenge, user=request.user).order_by('-created_at')
+        authentications = Authentication.objects.filter(challenge=challenge, user=request.user.id).order_by('-created_at')
         
         auth_data = [{
+            'user': auth.user.username,
+            'user_id': auth.user.id,
             'text': auth.text,
             'file_url': auth.file.url if auth.file else None,
-            'created_at': auth.created_at.isoformat()
+            'created_at': auth.created_at.isoformat(),
+            'index': auth.index,
         } for auth in authentications]
         
         return JsonResponse({'authentications': auth_data})
@@ -446,8 +450,22 @@ def joined_challenge_page(request, pk):
 
 
 def main_page(request):
-    challenge_list = ChallengeList.as_view()
-    return challenge_list(request)
+    # 참여자 수가 가장 많은 12개의 챌린지를 가져옵니다.
+    popular_challenges = Challenge.objects.annotate(
+        participants_count=Count('participants')
+    ).order_by('-participants_count')[:12]
+
+    # 기존의 ChallengeList view를 가져옵니다.
+    challenge_list_view = ChallengeList.as_view()
+    
+    # ChallengeList view를 호출하여 결과를 얻습니다.
+    response = challenge_list_view(request)
+    
+    # 만약 response가 TemplateResponse 인스턴스라면 context를 수정합니다.
+    if hasattr(response, 'context_data'):
+        response.context_data['popular_challenges'] = popular_challenges
+    
+    return response
 
 
 def pagination(request):
@@ -469,14 +487,20 @@ def pagination(request):
         'page_obj': page_obj
     })
 
-
-
 # CBV로 페이지 만들기
 class ChallengeList(ListView):
     model = Challenge
     template_name = 'habit_stacker/challenge_list.html'
-    ordering = '-pk' # 최신 글부터 나열
+    ordering = '-pk'  # 최신 글부터 나열
     paginate_by = 12
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # 참여자 수가 가장 많은 12개의 챌린지를 가져옵니다.
+        context['popular_challenges'] = Challenge.objects.annotate(
+            participants_count=Count('participants')
+        ).order_by('-participants_count')[:12]
+        return context
 
 # CBV로 챌린지 생성하기
 class ChallengeCreate(LoginRequiredMixin, CreateView):

@@ -3,109 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <title>Main</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+    {% load static %}
+    <script src="{% static 'jquery-3.6.0.min.js' %}"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+
+    <!-- jQuery --> 
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous" defer></script>
+    <script src="{% static 'bootstrap.min.js' %}" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous" defer></script>
+    <link href="{% static 'bootstrap.min.css' %}" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <style>
-        .btn-outline-custom {
-            color: #212224;
-            border-color: #212224;
-        }
-
-        .btn-outline-custom:hover {
-            color: #ffffff;
-            background-color: #212224;
-            border-color: #212224;
-        }
-
-        .btn-outline-custom:hover .profile {
-            filter: invert(1) brightness(200%);
-        }
-
-        .navbar {
-            min-height: 80px;
-        }
-
-        .navbar .container-fluid {
-            padding: 0 15px;
-        }
-
-        #search-container {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        @media (max-width: 991px) {
-            .navbar .container-fluid > div {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            #search-container {
-                position: static;
-                transform: none;
-                margin: 10px 0;
-            }
+        body, input, button, textarea, select {
+            font-family: 'Noto Sans KR', sans-serif;
         }
     </style>
-    {% block extra_head %}{% endblock %}
+
+    {% block extra_head %}
+    {% endblock %}
 </head>
 <body>
-    <!-- Navigation-->
-    <nav class="navbar navbar-expand-lg navbar-light mb-5" style="background-color: #e4e5ed;">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center w-100">
-                <!-- 로고 -->
-                <a class="navbar-brand" href="{% url 'main_page' %}">
-                    {% load static %}
-                    <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;">
-                </a>
+    <div class="content-wrapper">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #fff; border-bottom: 1px solid #212224; margin-bottom: 40px; box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <!-- 로고 -->
+                    <a class="navbar-brand" href="{% url 'main_page' %}">
+                        {% load static %}
+                        <img src="{% static 'logo_underbar.svg' %}" alt="Habit Stacker" style="width: 150px; height: auto;">
+                    </a>
 
-            <!-- 토글 버튼 -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+                <!-- 토글 버튼 -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-            <!-- 네비게이션 내용 -->
-            <div class="collapse navbar-collapse" id="navbarContent">
-                <!-- 검색창 -->
-                <div id="search-container" class="d-flex">
-                    <input id="search-input" class="form-control me-2" type="search" placeholder="Search" aria-label="Search" style="width: 300px;">
-                    <button class="btn btn-outline-custom" type="submit" onclick="searchChallenge()">Search</button>
-                </div>
-
-                <!-- 로그인/로그아웃 버튼 -->
-                <div class="ms-auto">
-                    {% if user.is_authenticated %}
-                    <div class="dropdown">
-                        <button class="btn btn-outline-custom dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img class="profile" src="{% static 'profile.svg' %}" alt="Profile" style="width: 20px; height: auto;">
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                            <li><a class="dropdown-item" href="#">My page</a></li>
-                            <li><a class="dropdown-item" href="{% url 'challenge_form' %}">Create</a></li>
-                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
-                        </ul>
+                <!-- 네비게이션 내용 -->
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <!-- 검색창 -->
+                    <div id="search-container" class="d-flex">
+                        <input id="search-input" class="form-control me-2" type="search" aria-label="Search" style="width: 300px; border-color: #5c5c5c; box-shadow: none;">
+                        <button class="btn btn-outline-custom" type="submit" onclick="searchChallenge()">Search</button>
                     </div>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-outline-custom me-2">Log In</a>
-                        <a href="{% url 'signup' %}" class="btn btn-outline-custom">Sign Up</a>
-                    {% endif %}
+
+                    <!-- 로그인/로그아웃 버튼 -->
+                    <div class="ms-auto">
+                        {% if user.is_authenticated %}
+                        <div class="dropdown">
+                            <button class="btn btn-outline-custom" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; margin: 0 0 0 0; padding: 0 0 0 0;">
+                                <img class="profile" src="{% static 'profile.svg' %}" alt="Profile" style="width: 40px; height: auto;">
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                                <li><a class="dropdown-item" href="{% url 'mypage' %}">My page</a></li>
+                                <li><a class="dropdown-item" href="{% url 'challenge_form' %}">Create</a></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn btn-outline-custom me-2">Log In</a>
+                            <a href="{% url 'signup' %}" class="btn btn-outline-custom">Sign Up</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-    </nav>
-
-    {% block main_area %}
-    {% endblock %}
+        </nav>
+    <main>
+        {% block main_area %}
+        {% endblock %}
+    </main>
 
     <!-- Footer-->
-    <footer class="py-5" style="background-color: #e4e5ed;">
+    <footer class="py-5">
         <div class="container"><p class="m-0 text-center" style="color: black">Copyright &copy; Habit Stacker 2024</p></div>
     </footer>
 
     <!-- 챗봇 버튼 -->
     <div id="chatbot-button" class="position-fixed bottom-0 end-0 mb-5 me-5">
-        <button class="rounded-circle" style="width: 60px; height: 60px; background-color: #e4e5ed; border: 2px slid #212224;" onclick="toggleChatbot()">
+        <button class="rounded-circle" style="width: 60px; height: 60px; background-color: #fff; border: 2px slid #212224;" onclick="toggleChatbot()">
             <i class="bi bi-chat-dots-fill"></i>
         </button>
     </div>
@@ -115,402 +95,50 @@
         <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
             <h5 class="m-0">챗봇</h5>
             <form id="chatbot-image-form" enctype="multipart/form-data" style="display: none;">
-                <div class="input-group mt-2">
-                    <label for="image-input" class="custom-file-upload" style="border: 1px solid #ddd; cursor: pointer;">챌린지 인증하기</label>
+                <div class="input-group">
+                    <label for="image-input" id="image-label" class="custom-file-upload" style="cursor: pointer; text-align: center;">인증하기</label>
                     <input type="file" id="image-input" accept="image/*" style="display: none;">
                 </div>
             </form>
-            <button id="back-button" class="btn btn-sm btn-outline-secondary me-2" onclick="backToChallengeList()" style="display: none;">뒤로</button>
+            <button id="back-button" class="btn btn-sm btn-outline-secondary me-2" onclick="backToChallengeList()" style="display: none; right: 0;">뒤로</button>
             <button class="btn-close" onclick="toggleChatbot()"></button>
         </div>
         <div id="chatbot-content" class="p-2" style="height: calc(100% - 100px); overflow-y: auto;">
             <!-- 챌린지 리스트 또는 채팅 내용이 여기에 표시됩니다 -->
         </div>
         <div id="chatbot-input-area" class="p-2 border-top" style="display: none;">
-            <form id="chatbot-form">
+            <form id="chatbot-form" onsubmit="sendChatbotMessage(event)">
                 <div class="input-group">
                     <input type="text" id="chatbot-input" class="form-control" placeholder="챌린지 인증 메세지를 입력하거나 AI에게 도움을 요청해보세요!">
-                    <button type="submit" class="btn btn-primary">전송</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #212224; color: #fff; border: 1px solid #212224;">전송</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
-    
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
-<script>
-    const userId = "{{ user.id }}";
-    const isAi = "{{ is_ai }}"
-    const userName = "{{ user.username }}"
-    let selectedChallengeId = null;
-    let isLoading = false;
-
-    function toggleChatbot() {
-        var chatbotWindow = document.getElementById('chatbot-window');
-        var chatbotButton = document.getElementById('chatbot-button');
-        if (chatbotWindow.style.display === 'none') {
-            chatbotWindow.style.display = 'block';
-            chatbotButton.style.display = 'none';
-            loadChallengeList();
-        } else {
-            chatbotWindow.style.display = 'none';
-            chatbotButton.style.display = 'block';
-        }
-    }
-
-    async function loadChallengeList() {
-        const chatbotContent = document.getElementById('chatbot-content');
-        chatbotContent.innerHTML = '<p>참여 중인 챌린지 목록을 불러오는 중...</p>';
-
-        try {
-            const response = await fetch(`/api/user/challenges/${userId}/`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const challenges = await response.json();
-
-            chatbotContent.innerHTML = '<ul class="list-group">';
-            challenges.forEach(challenge => {
-                chatbotContent.innerHTML += `
-                    <li class="list-group-item" style="cursor: pointer;" onclick="selectChallenge(${challenge.id})">
-                        ${challenge.title}
-                    </li>`;
-            });
-            chatbotContent.innerHTML += '</ul>';
-        } catch (error) {
-            console.error('챌린지 목록을 불러오는 중 오류 발생:', error);
-            chatbotContent.innerHTML = '<p>챌린지 목록을 불러오는 데 실패했습니다.</p>';
-        }
-    }
-
-    function selectChallenge(challengeId) {
-        selectedChallengeId = challengeId;
-        const chatbotContent = document.getElementById('chatbot-content');
-        chatbotContent.innerHTML = '<p>채팅 내용을 불러오는 중...</p>';
-        document.getElementById('chatbot-input-area').style.display = 'block';
-        document.getElementById('back-button').style.display = 'inline-block';
-        document.getElementById('chatbot-image-form').style.display = 'block'; // 이미지 업로드 폼 표시
-        loadChatHistory(1);
-    }
-
-    async function loadChatHistory(page = 1) {
-        if (!selectedChallengeId || isLoading) return;
-        isLoading = true;
-        const chatbotContent = document.getElementById('chatbot-content');
-        console.log(selectedChallengeId); // 디버깅을 위해 추가
-
-        try {
-            const response = await fetch(`/api/challenge/${selectedChallengeId}/chat-history/${userId}/?page=${page}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-
-            if (page === 1) {
-                chatbotContent.innerHTML = '';
-            }
-
-            data.history.forEach(message => {
-                const messageElement = createMessageElement(message);
-                chatbotContent.appendChild(messageElement);
-            });
-
-            chatbotContent.scrollTop = chatbotContent.scrollHeight;
-        } catch (error) {
-            console.error('채팅 기록을 불러오는 중 오류 발생:', error);
-            chatbotContent.innerHTML = '<p>채팅 기록을 불러오는 데 실패했습니다.</p>';
-        } finally {
-            isLoading = false;
-        }
-    }
-
-    function createMessageElement(message) {
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${message.is_ai ? 'ai-message' : 'user-message'}`;
-        
-        const username = message.is_ai ? 'AI' : userName;
-        
-        messageElement.innerHTML = `<strong>${username}:</strong></br>${message.message}`;
-        if (!message.is_ai && message.image_url) {
-            // 이미지와 타임스탬프를 감싸는 컨테이너 추가
-            messageElement.innerHTML += `
-                <div class="image-timestamp-container">
-                    <img src="${message.image_url}" alt="인증 이미지" style="max-width: 150px;">
-                    <span class="timestamp"></span>
-                </div>`;
-            
-            // 타임스탬프 형식 변경 및 추가
-            const date = new Date(message.timestamp);
-            const formattedTimestamp = `${date.getFullYear()}:${String(date.getMonth() + 1).padStart(2, '0')}:${String(date.getDate()).padStart(2, '0')}-${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            messageElement.querySelector('.timestamp').textContent = formattedTimestamp;
-        }
-    
-        return messageElement;
-    }
-
-    // CSS 스타일 추가
-    const style = document.createElement('style');
-        style.textContent = `
-            .image-timestamp-container {
-                position: relative;
-                display: inline-block;
-            }
-            .timestamp {
-                position: absolute;
-                right: 5px;
-                bottom: 5px;
-                background-color: rgba(255, 255, 255, 0.7);
-                padding: 2px 5px;
-                border-radius: 3px;
-                font-size: 0.8em;
-            }
-        `;
-
-    function backToChallengeList() {
-        selectedChallengeId = null;
-        document.getElementById('chatbot-input-area').style.display = 'none';
-        document.getElementById('back-button').style.display = 'none';
-        document.getElementById('chatbot-image-form').style.display = 'none'; // 이미지 업로드 폼 숨기기
-        loadChallengeList();
-    }
-
-    function addMessage(message) {
-        const chatbotContent = document.getElementById('chatbot-content');
-        const messageElement = document.createElement('div');
-        messageElement.className = message.is_ai ? 'ai-message' : 'user-message';
-        
-        let content = '';
-        if (message.message) {
-            content = typeof message.message === 'string' ? message.message : message.message.content;
-        }
-        
-        let innerHTML = `<strong>${message.is_ai ? 'AI' : userName}:</strong>`;
-        if (content) {
-            innerHTML += ` ${content}`;
-        }
-        messageElement.innerHTML = innerHTML;
-        
-        if (message.image) {
-            const img = document.createElement('img');
-            img.src = `data:image/webp;base64,${message.image}`;
-            img.alt = "Uploaded image";
-            img.style.maxWidth = "200px";
-            messageElement.appendChild(img);
-        } else if (message.image_url) {
-            const img = document.createElement('img');
-            img.src = message.image_url;
-            img.alt = "Uploaded image";
-            img.style.maxWidth = "200px";
-            messageElement.appendChild(img);
-        }
-        
-        chatbotContent.appendChild(messageElement);
-        chatbotContent.scrollTop = chatbotContent.scrollHeight;
-    }
-
-    function addLoadingMessage() {
-        const chatbotContent = document.getElementById('chatbot-content');
-        const loadingElement = document.createElement('div');
-        loadingElement.className = 'ai-message loading';
-        loadingElement.innerHTML = '<strong>AI:</strong> Loading...';
-        chatbotContent.appendChild(loadingElement);
-        chatbotContent.scrollTop = chatbotContent.scrollHeight;
-        return loadingElement;
-    }
-
-    async function sendChatbotMessage(event) {
-        event.preventDefault();
-        
-        const chatbotInput = document.getElementById('chatbot-input');
-        const message = chatbotInput.value.trim();
-        const imageInput = document.getElementById('image-input');
-        
-        if (message || imageInput.files.length > 0) {
-            const formData = new FormData();
-            formData.append('challenge_id', selectedChallengeId);
-            
-            if (message) {
-                formData.append('message', message);
-            }
-            
-            if (imageInput.files.length > 0) {
-                formData.append('image', imageInput.files[0]);
-            }
-
-            // 사용자 메시지 객체 생성
-            const userMessage = { is_ai: false, user: userName };
-            
-            // 메시지가 있으면 추가
-            if (message) {
-                userMessage.message = message;
-            }
-            
-            // 이미지가 있으면 처리
-            if (imageInput) {
-                userMessage.image_url = URL.createObjectURL(imageInput.files[0]);
-            }
-            
-            // 사용자 메시지 추가 (메시지나 이미지 중 하나라도 있으면)
-            if (userMessage.message || userMessage.image_url) {
-                addMessage(userMessage);
-            }
-            
-            // AI 로딩 메시지 추가
-            let loadingMessage = addLoadingMessage();
-
-            // 입력 필드 초기화
-            chatbotInput.value = '';
-            imageInput.value = '';
-
-            try {
-                const response = await fetch('/api/challenge/chat/', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const decodedChunk = decoder.decode(value, { stream: true });
-                    const messages = decodedChunk.split('\n').filter(Boolean);
-
-                    for (const messageStr of messages) {
-                        const messageData = JSON.parse(messageStr);
-                        if (messageData.status === 'success') {
-                            if (loadingMessage) {
-                                loadingMessage.remove();
-                                loadingMessage = null;
-                            }
-                            if (messageData.message.is_ai) {
-                                addMessage(messageData.message);
-                            }
-                        } else {
-                            console.error('메시지 처리 실패:', messageData.error);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('에러:', error);
-                if (loadingMessage) {
-                    loadingMessage.remove();
-                }
-                addMessage({message: '오류가 발생했습니다. 다시 시도해주세요.', is_ai: true});
-            }
-        }
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-        // challengeId 변수 설정 (Django 템플릿 변수 사용)
-        const challengeId = "{{ challenge.id }}";
-        const userId = "{{ user.id }}";
-        const isAi = "{{ is_ai }}";
-        const userName = "{{ user.username }}"
-        let selectedImage = null;
-        let currentPage = 1;
+    <script>
+        let selectedChallengeId = null;
         let isLoading = false;
+    
+        const userId = "{{ user.id }}";
+        const userName = "{{ user.username }}";
+        const baseUrl = "{% url 'main_page' %}";
+        const chatbotInput = document.getElementById('chatbot-input');
+        const imageInput = document.getElementById('image-input');
+        const imageLabel = document.getElementById('image-label');
+        const chatbotContent = document.getElementById('chatbot-content');
 
-        async function loadChatHistory(page = 1) {
-            if (isLoading) return;
-            isLoading = true;
-            try {
-                const response = await fetch(`/api/challenge/${challengeId}/chat-history/${userId}/?page=${page}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                const chatMessages = document.getElementById('chat-messages');
-
-                if (page === 1) {
-                    chatMessages.innerHTML = '';
-                }
-
-                data.history.forEach(message => {
-                    const messageElement = createMessageElement(message);
-                    if (page === 1) {
-                        chatMessages.appendChild(messageElement);
-                    } else {
-                        chatMessages.insertBefore(messageElement, chatMessages.firstChild);
-                    }
-                });
-
-                if (page === 1) {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-
-                currentPage = page;
-            } catch (error) {
-                console.error('채팅 기록을 불러오는 중 오류 발생:', error);
-            } finally {
-                isLoading = false;
+        document.getElementById('image-input').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('image-label').textContent = '첨부됨';
+            } else {
+                document.getElementById('image-label').textContent = '인증하기';
             }
-        }
+        });
 
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) {
-            chatMessages.addEventListener('scroll', function(e) {
-                if (e.target.scrollTop === 0 && !isLoading) {
-                    loadChatHistory(currentPage + 1);
-                }
-            });
-        }
-
-        const chatbotForm = document.getElementById('chatbot-form');
-        if (chatbotForm) {
-            chatbotForm.addEventListener('submit', sendChatbotMessage);
-        }
-
-        // CSRF 토큰을 가져오는 함수
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    }
-)
-</script>
-<script>
-    const baseUrl = "{% url 'main_page' %}";
-
-    function searchChallenge() {
-        let searchValue = document.getElementById('search-input').value.trim();
-        if (searchValue.length > 1) {
-            window.location.href = baseUrl + "search/" + encodeURIComponent(searchValue) + "/";
-        }
-        else {
-            alert('검색어('+ searchValue +')가 너무 짧습니다.')
-        }
-    };
-
-    document.getElementById('search-input').addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') {
-            searchChallenge();
-        }
-    });
-document.head.appendChild(style);
-
-</script>
-
-    {% block extra_scripts %}{% endblock %}
+    </script>
+    <script src="{% static 'js/base.js' %}"></script>
+    {% block extra_scripts %}
+    {% endblock %}
 </body>
 </html>

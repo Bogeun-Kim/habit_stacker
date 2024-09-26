@@ -38,5 +38,16 @@
             </div>
         </div>
     </div> 
+    {% endblock %}
+    {% block extra_scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initializeChatbot === 'function') {
+                initializeChatbot();
+            } else {
+                console.error('initializeChatbot function not found');
+                }
+            });
+        </script>
 
 {% endblock %}

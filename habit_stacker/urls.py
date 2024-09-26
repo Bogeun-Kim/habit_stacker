@@ -23,6 +23,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('', views.main_page, name='main_page'),
+    path('mypage/', views.mypage, name='mypage'),
     # path('account/', include('django.contrib.auth.urls')),
     # path('account/', include('account.urls')),
     # path('', views.ChallengeList.as_view(), name='challenge_list'),
@@ -30,6 +31,8 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout, name='logout'),
     path('search/<str:q>/', views.ChallengeSearch.as_view(), name='challenge_search'),
+    path('challenge_list/', views.ChallengeList.as_view(), name='challenge_list'),
+    # path('challenge_list/<str:category>/', views.ChallengeList.as_view(), name='challenge_list_category'),
 
     path('single_challenge_page/<int:pk>/', views.single_challenge_page, name='single_challenge_page'),
     path('join_challenge/<int:challenge_id>/', views.join_challenge, name='join_challenge'),
@@ -39,7 +42,7 @@ urlpatterns = [
 
     path('challenge_form/', views.create_challenge, name='challenge_form'),
     path('challenge/<int:challenge_id>/add_comment/<int:user_id>/<int:index>/', views.add_comment, name='add_comment'),
-    path('challenge/<int:challenge_id>/edit_challenge/', views.edit_challenge, name='edit_challenge'),
+    path('challenge/<int:challenge_id>/edit_challenge/<int:index>/', views.edit_challenge, name='edit_challenge'),
     path('api/challenge/chat/', views.chat_message, name='chat_message'),
 
     # path('challenge/<int:challenge_id>/authenticate/', views.authenticate_challenge, name='authenticate_challenge'),

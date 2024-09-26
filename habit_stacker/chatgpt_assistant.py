@@ -99,68 +99,57 @@ class ChatGPTAssistant:
     async def process_image(self, image_data, challenge_context):
         image_base64 = base64.b64encode(image_data).decode('utf-8')
         
-        response = await self.client.chat.completions.create(
-            model="gpt-4o-mini-2024-07-18",
-            messages=[
-                {
-                    "role": "system",
-                    "content": f"You are analyzing an image for the challenge: {challenge_context['title']}. "
-                               f"This challenge is about {challenge_context['description']} and lasts for {challenge_context['duration']}. "
-                               f"It falls under the category of {challenge_context['category']}. "
-                               f"Please analyze the image in the context of this challenge."
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Please analyze this image in the context of the challenge."},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_base64}"
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini-2024-07-18",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"챌린지: {challenge_context['title']}에 대한 이미지를 분석합니다. "
+                                   f"챌린지 기간: {challenge_context['duration']}, "
+                                   f"카테고리: {challenge_context['category']}, "
+                                   f"설명: {challenge_context['description']}"
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "이 이미지를 챌린지의 맥락에서 분석해 주세요."},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}"
+                                }
                             }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=300
-        )
-        
-        return response.choices[0].message.content
+                        ]
+                    }
+                ],
+                max_tokens=300
+            )
+            
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"이미지 처리 중 오류 발생: {str(e)}")
+            return "이미지 분석을 수행할 수 없습니다. 텍스트 기반 응답만 제공됩니다."
 
     async def process_chat_message_async(self, user_id, challenge_id, message, image_data):
         challenge_context = self.challenge_contexts.get(challenge_id, {})
         
-        messages = [
-            {"role": "system", "content": f"You are assisting with the challenge: {challenge_context.get('title')}. "
-                                          f"Duration: {challenge_context.get('duration')}, "
-                                          f"Category: {challenge_context.get('category')}. "
-                                          f"Description: {challenge_context.get('description')}"}
-        ]
-
-        if image_data:
-            image_base64 = base64.b64encode(image_data).decode('utf-8')
-            messages.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "사용자가 인증 이미지를 업로드했습니다. 이 이미지를 챌린지의 맥락에서 분석해 주세요. 인증을 확인하고 축하해주세요."},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_base64}"
-                        }
-                    }
-                ]
-            })
+        thread_id = await self.get_or_create_thread(user_id, challenge_id)
         
-        messages.append({"role": "user", "content": message})
-
-        try:
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-mini-2024-07-18",
-                messages=messages,
-                max_tokens=300
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"Error processing message: {str(e)}")
-            return "죄송합니다. 메시지 처리 중 오류가 발생했습니다."
+        if image_data:
+            # 이미지 분석
+            image_analysis = await self.process_image(image_data, challenge_context)
+            
+            # 이미지 분석 결과를 스레드에 추가
+            await self.add_message_to_thread(thread_id, f"사용자가 인증 이미지를 업로드했습니다. 이미지 분석 결과: {image_analysis}")
+        
+        # 사용자 메시지를 스레드에 추가
+        await self.add_message_to_thread(thread_id, message)
+        
+        # 어시스턴트 실행
+        await self.run_assistant(thread_id, challenge_id)
+        
+        # 어시스턴트의 응답 가져오기
+        response = await self.get_assistant_response(thread_id)
+        
+        return response

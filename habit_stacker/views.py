@@ -2,8 +2,7 @@ from django.urls import reverse_lazy
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView
 # Paginator
-from django.core.paginator import Paginator
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 # 댓글
 # from .models import Comment
 
@@ -13,7 +12,7 @@ from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth import logout as auth_logout, login as auth_login
 from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_protect
@@ -40,7 +39,7 @@ import io
 import os
 from .settings import OPENAI_API_KEY
 from .models import Challenge, ChallengeParticipant, User, ChallengeAuthentication, ChatMessage, Authentication, Comment
-from .forms import SignUpForm, LoginForm, ChallengeForm, CommentForm, AuthenticationForm
+from .forms import SignUpForm, LoginForm, ChallengeForm, CommentForm, AuthenticationForm, UserProfileForm, ChallengeForm, PasswordChangeForm
 from .chatgpt_assistant import ChatGPTAssistant
 import logging
 
@@ -93,6 +92,9 @@ async def get_chat_history(request, challenge_id, user_id):
         logger.exception("get_chat_history에서 예상치 못한 오류 발생")
         return JsonResponse({'status': 'error', 'error': '서버 오류가 발생했습니다.'}, status=500)
     
+from django.utils import timezone
+from datetime import timedelta
+
 @require_POST
 @csrf_exempt
 async def chat_message(request):
@@ -108,8 +110,6 @@ async def chat_message(request):
         challenge_id = data.get('challenge_id')
         message = data.get('message', '')
         image = request.FILES.get('image')
-
-        logger.info(f"Received request - challenge_id: {challenge_id}, message: {message}, image: {image is not None}")
 
         if not challenge_id:
             logger.error("Missing challenge_id")
@@ -132,17 +132,6 @@ async def chat_message(request):
         user_id = await get_user_id()
         user = await get_user(id=user_id)
         
-        assistant = ChatGPTAssistant()
-        
-        # 챌린지별 어시스턴트 생성 또는 업데이트 (모든 필요한 정보 전달)
-        await assistant.create_or_update_assistant(
-            challenge_id,
-            challenge.title,
-            challenge.duration,
-            challenge.description,
-            challenge.category
-        )
-        
         create_chat_message = sync_to_async(ChatMessage.objects.create)
         user_message = await create_chat_message(
             challenge=challenge,
@@ -150,16 +139,6 @@ async def chat_message(request):
             message=message,
             image=image if image else None
         )
-
-        # 이미지가 포함되어 있으면 챌린지 인증 진행
-        if image:
-            create_authentication = sync_to_async(Authentication.objects.create)
-            await create_authentication(
-                user=user,
-                challenge=challenge,
-                text=message,
-                file=image
-            )
 
         user_response = {
             'status': 'success',
@@ -184,29 +163,67 @@ async def chat_message(request):
                 img.save(buffer, format="WebP")
                 image_data = buffer.getvalue()  # bytes 타입으로 변환
         
-        ai_response = await assistant.process_chat_message_async(user.id, challenge_id, message, image_data)
+        # 이미지가 포함되어 있으면 챌린지 인증 진행
+        if image:
+            # 오늘 날짜의 시작 시간 계산
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # 오늘 이미 인증한 내역이 있는지 확인
+            get_today_auth = sync_to_async(Authentication.objects.filter(
+                user=user,
+                challenge=challenge,
+                created_at__gte=today_start
+            ).exists)
+            
+            already_authenticated = await get_today_auth()
+            
+            if already_authenticated:
+                # 이미 인증한 경우
+                ai_response = "이미 오늘 챌린지 인증을 완료하셨습니다. 챌린지 인증은 하루에 한 번만 가능합니다."
+            else:
+                # 인증 진행
+                create_authentication = sync_to_async(Authentication.objects.create)
+                await create_authentication(
+                    user=user,
+                    challenge=challenge,
+                    text=message,
+                    file=image
+                )
+                # 인증 이력이 없는 경우 기존 로직 실행
+                assistant = ChatGPTAssistant()
+                
+                # 챌린지별 어시스턴트 생성 또는 업데이트 (모든 필요한 정보 전달)
+                await assistant.create_or_update_assistant(
+                    challenge_id,
+                    challenge.title,
+                    challenge.duration,
+                    challenge.description,
+                    challenge.category
+                )
+                
+                ai_response = await assistant.process_chat_message_async(user.id, challenge_id, message, image_data)
 
-        ai_message = await create_chat_message(
-            challenge=challenge,
-            user=user,
-            message=ai_response,
-            is_ai=True
-        )
+            ai_message = await create_chat_message(
+                challenge=challenge,
+                user=user,
+                message=ai_response,
+                is_ai=True
+            )
 
-        ai_response = {
-            'status': 'success',
-            'message': {
-                'id': ai_message.id,
-                'user': 'AI',
-                'message': ai_message.message,
-                'timestamp': ai_message.timestamp.isoformat(),
-                'image_url': None,
-                'is_ai': True
+            ai_response = {
+                'status': 'success',
+                'message': {
+                    'id': ai_message.id,
+                    'user': 'AI',
+                    'message': ai_message.message,
+                    'timestamp': ai_message.timestamp.isoformat(),
+                    'image_url': None,
+                    'is_ai': True
+                }
             }
-        }
 
-        response_data = [user_response, ai_response]
-        return StreamingHttpResponse((json.dumps(data).encode('utf-8') + b'\n' for data in response_data), content_type='application/json')
+            response_data = [user_response, ai_response]
+            return StreamingHttpResponse((json.dumps(data).encode('utf-8') + b'\n' for data in response_data), content_type='application/json')
 
     except json.JSONDecodeError:
         logger.error("Invalid JSON in request body")
@@ -351,8 +368,8 @@ def add_comment(request, challenge_id, user_id, index):
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
-def edit_challenge(request, challenge_id):
-    authentication = get_object_or_404(Authentication, challenge_id=challenge_id, user=request.user)
+def edit_challenge(request, challenge_id, index):
+    authentication = get_object_or_404(Authentication, challenge_id=challenge_id, user=request.user, index=index)
     if request.method == 'POST':
         form = AuthenticationForm(request.POST, request.FILES, instance=authentication)
         if form.is_valid():
@@ -370,7 +387,7 @@ def edit_challenge(request, challenge_id):
     return render(request, 'habit_stacker/edit_challenge_authenticate.html', {
         'form': form, 
         'authentication': authentication,
-        'challenge_id': challenge_id
+        'challenge_id': challenge_id,
     })
 
 # @login_required
@@ -400,6 +417,7 @@ def create_challenge(request):
         if form.is_valid():
             challenge = form.save(commit=False)
             challenge.created_at = timezone.now()
+            challenge.creator = request.user
             challenge.save()
             return redirect('main_page')
     else:
@@ -448,12 +466,72 @@ def joined_challenge_page(request, pk):
     }
     return render(request, 'habit_stacker/joined_challenge.html', context)
 
+@login_required
+def mypage(request):
+    user = request.user
+    challenges = Challenge.objects.filter(creator=user).order_by('-created_at')
+    
+    # 페이지네이션 설정
+    paginator = Paginator(challenges, 10)  # 페이지당 10개의 챌린지
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    if request.method == 'POST':
+        if 'update_profile' in request.POST:
+            profile_form = UserProfileForm(request.POST, request.FILES, instance=user)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, '프로필이 성공적으로 업데이트되었습니다.')
+                return redirect('mypage')
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, '비밀번호가 성공적으로 변경되었습니다.')
+                return redirect('mypage')
+        elif 'delete_account' in request.POST:
+            user.delete()
+            messages.success(request, '계정이 성공적으로 삭제되었습니다.')
+            return redirect('main_page')
+    else:
+        profile_form = UserProfileForm(instance=user)
+        password_form = PasswordChangeForm(user)
+
+    context = {
+        'user': user,
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'challenges': page_obj,
+    }
+    return render(request, 'habit_stacker/mypage.html', context)
+
+@login_required
+def mypage_edit_challenge(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id, creator=request.user)
+    if request.method == 'POST':
+        form = ChallengeForm(request.POST, request.FILES, instance=challenge)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '챌린지가 성공적으로 수정되었습니다.')
+            return redirect('mypage')
+    else:
+        form = ChallengeForm(instance=challenge)
+    return render(request, 'habit_stacker/mypage_edit_challenge.html', {'form': form, 'challenge': challenge})
+
+@login_required
+def delete_challenge(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id, creator=request.user)
+    if request.method == 'POST':
+        challenge.delete()
+        messages.success(request, '챌린지가 성공적으로 삭제되었습니다.')
+    return redirect('mypage')
 
 def main_page(request):
     # 참여자 수가 가장 많은 12개의 챌린지를 가져옵니다.
     popular_challenges = Challenge.objects.annotate(
         participants_count=Count('participants')
-    ).order_by('-participants_count')[:12]
+    ).order_by('-participants_count')[:5]
 
     # 기존의 ChallengeList view를 가져옵니다.
     challenge_list_view = ChallengeList.as_view()
@@ -467,45 +545,61 @@ def main_page(request):
     
     return response
 
-
-def pagination(request):
-    challenges = Challenge.objects.all().order_by('-created_at')  # 생성일 기준 내림차순 정렬
-    
-    # 페이지당 아이템 수 설정
-    items_per_page = 12
-    
-    # 페이지네이터 객체 생성
-    paginator = Paginator(challenges, items_per_page)
-    
-    # 현재 페이지 번호 가져오기 (기본값 1)
-    page_number = request.GET.get('page', 1)
-    
-    # 해당 페이지의 아이템들 가져오기
-    page_obj = paginator.get_page(page_number)
-    
-    return render(request, 'habit_stacker/challenge_list.html', {
-        'page_obj': page_obj
-    })
-
 # CBV로 페이지 만들기
 class ChallengeList(ListView):
     model = Challenge
     template_name = 'habit_stacker/challenge_list.html'
-    ordering = '-pk'  # 최신 글부터 나열
+    context_object_name = 'challenge_list'
     paginate_by = 12
+
+    def get_queryset(self):
+        queryset = Challenge.objects.all().order_by('-created_at')
+        category = self.request.GET.get('category')
+        if category and category != 'ALL':
+            queryset = queryset.filter(category=category)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # 참여자 수가 가장 많은 12개의 챌린지를 가져옵니다.
+        categories = Challenge.objects.values_list('category', flat=True).distinct()
+        context['categories'] = categories
         context['popular_challenges'] = Challenge.objects.annotate(
             participants_count=Count('participants')
         ).order_by('-participants_count')[:12]
+        context['current_category'] = self.request.GET.get('category', 'ALL')
+        
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            challenge_list = []
+            for challenge in context['challenge_list']:
+                challenge_data = {
+                    'id': challenge.id,
+                    'title': challenge.title,
+                    'duration': challenge.duration,
+                    'category': challenge.category,
+                    'image_url': challenge.image.url if challenge.image else None,
+                    'creator': challenge.creator.username if hasattr(challenge, 'creator') and challenge.creator else None,
+                }
+                challenge_list.append(challenge_data)
+            context['challenge_list'] = challenge_list
+        
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'challenges': context['challenge_list'],
+                'has_previous': context['page_obj'].has_previous(),
+                'has_next': context['page_obj'].has_next(),
+                'number': context['page_obj'].number,
+                'num_pages': context['paginator'].num_pages,
+                'current_category': context['current_category'],
+            })
+        return super().render_to_response(context, **response_kwargs)
 
 # CBV로 챌린지 생성하기
 class ChallengeCreate(LoginRequiredMixin, CreateView):
     model = Challenge
-    fields = ['title', 'description', 'duration', 'category', 'image', 'note']
+    fields = ['title', 'description', 'duration', 'category', 'image', 'note', 'creator']
     template_name = 'habit_stacker/challenge_form.html'
     success_url = reverse_lazy('main_page')
 
@@ -516,7 +610,7 @@ class ChallengeCreate(LoginRequiredMixin, CreateView):
             file_content = ContentFile(image_file.read())
             file_path = default_storage.save(file_name, file_content)
             form.instance.image = file_path
-        form.instance.creator = self.request.user  # 챌린지 생성자 설정
+            form.instance.creator = self.request.user  # 챌린지 생성자 설정
         return super().form_valid(form)
 
     def get_form(self, form_class=None):
@@ -565,8 +659,6 @@ def logout(request):
     auth_logout(request)
     messages.success(request, '로그아웃되었습니다.')
     return redirect('main_page')
-
-
 
 # 검색 기능
 class ChallengeSearch(ChallengeList):

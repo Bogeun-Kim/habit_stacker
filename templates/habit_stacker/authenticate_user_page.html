@@ -16,7 +16,7 @@
                 <p class="card-text">인증 텍스트 없음</p>
             {% endif %}
             {% if user.id == authentication.user_id %}
-                <a href="{% url 'edit_challenge' challenge.id %}" class="btn btn-primary">수정하기</a>
+                <a href="{% url 'edit_challenge' challenge_id=challenge.id index=index %}" class="btn btn-primary">수정하기</a>
             {% endif %}
         </div>
     </div>
@@ -32,70 +32,14 @@
 
     <!-- 댓글 목록 -->
     <div id="comments-list"></div>
-
-    <script>
-        console.log("{{ challenge.id }}")
-        console.log("{{ authentication.user.id }}")
-        console.log("{{ index }}")
-        function loadComments() {
-            fetch(`/get_comments/{{ challenge.id }}/{{ authentication.user.id }}/{{ index }}/`)
-                .then(response => response.json())
-                .then(data => {
-                    let commentsList = document.getElementById('comments-list');
-                    commentsList.innerHTML = '';
-                    data.comments.forEach(comment => {
-                        let newComment = document.createElement('div');
-                        newComment.className = 'card mt-2';
-                        newComment.innerHTML = `
-                            <div class="card-body">
-                                <h6 class="card-subtitle mb-2 text-muted">${comment.comment_user}</h6>
-                                <p class="card-text">${comment.text}</p>
-                                <p class="card-text"><small class="text-muted">${comment.created_at}</small></p>
-                            </div>
-                        `;
-                        commentsList.appendChild(newComment);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('댓글을 불러오는 중 오류가 발생했습니다.');
-                });
-        }
-
-        // 페이지 로드 시 댓글 불러오기
-        document.addEventListener('DOMContentLoaded', loadComments);
-
-        document.getElementById('comment-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            let form = this;
-            let formData = new FormData(form);
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // 댓글 추가 후 모든 댓글 다시 불러오기
-                    loadComments();
-                    
-                    // 폼 초기화
-                    form.reset();
-                } else {
-                    alert('댓글 작성에 실패했습니다.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('댓글 작성 중 오류가 발생했습니다.');
-            });
-        });
-    </script>
-</div>
+</div> 
+{% endblock %}
+{% block extra_scripts %}
+{% load static %}
+<script>
+    var challengeId = "{{ challenge.id }}";
+    var authenticationUserId = "{{ authentication.user.id }}";
+    var index = "{{ index }}";
+</script>
+    <script src="{% static 'js/authenticate_user_page.js' %}"></script>
 {% endblock %}

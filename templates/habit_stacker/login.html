@@ -32,7 +32,7 @@
 
     <!-- Left Box -->
 
-       <div class="col-md-6 d-flex justify-content-center align-items-center flex-column left-box" style="background: #e4e5ed;">
+       <div class="col-md-6 d-flex justify-content-center align-items-center flex-column left-box" onclick=location.href="{% url 'main_page' %}" style="background: #e4e5ed;">
            <div class="featured-image mb-3">
             <img src="{% static 'logo.svg' %}" class="img-fluid" style="width: 250px;">
            </div>
@@ -55,16 +55,13 @@
                     <div class="input-group mb-1">
                         {{ form.password }}
                     </div>
-                    <div class="input-group mb-5 d-flex justify-content-between">
-                        <div class="form-check">
+                    <!-- <div class="input-group mb-5 d-flex justify-content-between"> -->
+                        <!-- <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="formCheck">
                             <label for="formCheck" class="form-check-label text-secondary"><small>Remember Me</small></label>
-                        </div>
-                        <div class="forgot">
-                            <small><a href="#">Forgot Password?</a></small>
-                        </div>
-                    </div>
-                    <div class="input-group mb-3">
+                        </div> -->
+                    <!-- </div> -->
+                    <div class="input-group mb-3" style="margin-top: 20px;">
                         <button class="btn btn-lg btn-outline-custom w-100 fs-6">Log In</button>
                     </div>
                 </form>
@@ -75,8 +72,5 @@
        </div>
       </div>
     </div>
-
-
-    
 </body>
 </html>

@@ -23,7 +23,7 @@ class Challenge(models.Model):
         ('For 3 weeks', 'For 3 weeks'),
         ('For 4 weeks', 'For 4 weeks'),
     ]
-
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_challenges')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -75,6 +75,13 @@ class User(models.Model):
 
     def check_password(self, raw_password):
         return bcrypt.checkpw(raw_password.encode(), self.password.encode())
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+
+    def __str__(self):
+        return self.user.username
 
 class ChallengeAuthentication(models.Model):
     participant = models.ForeignKey(ChallengeParticipant, on_delete=models.CASCADE)
